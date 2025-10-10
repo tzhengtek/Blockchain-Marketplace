@@ -1,10 +1,10 @@
-"use client";
 import { JSX } from "react";
 import "./header.css";
 
 const navigation: { name: string; href: string }[] = [
   { name: "Swap", href: "#swap" },
   { name: "Exchange", href: "#exchange" },
+  { name: "Transaction", href: "#transaction" },
 ];
 
 export default function Header(): JSX.Element {
@@ -12,9 +12,7 @@ export default function Header(): JSX.Element {
     <header className="header">
       <div className="container">
         <div className="inner">
-          <div className="brand-wrap">
-            <span className="brand">Blockchain Project</span>
-          </div>
+          <span className="brand">Blockchain Project</span>
 
           <nav className="nav">
             {navigation.map((item) => (

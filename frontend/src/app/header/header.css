@@ -49,9 +49,10 @@
 }
 
 .nav-item{
+  
   color: var(--muted);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: bold;
   transition: color .2s;
 }
 
