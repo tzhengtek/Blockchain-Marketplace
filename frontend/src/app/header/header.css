@@ -1,0 +1,132 @@
+:root{
+  --bg-gradient: linear-gradient(90deg, rgba(20,20,30,0.85), rgba(30,30,50,0.85));
+  --backdrop-blur: 8px;
+  --border-color: rgba(255,255,255,0.06);
+  --card-bg: rgba(10,10,14,0.85);
+  --muted: #9ca3af;
+  --primary: #7c3aed;
+  --text-white: #ffffff;
+  --shadow-glow: 0 6px 20px rgba(124,58,237,0.25);
+}
+
+.header{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-gradient);
+  backdrop-filter: blur(var(--backdrop-blur));
+  border-bottom: 1px solid var(--border-color);
+}
+
+.container{
+  max-width: 1280px;
+  margin: auto;
+  padding: 1rem;
+}
+
+.inner{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+}
+
+.brand{
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+  background-image: var(--gradient-primary, linear-gradient(90deg, #6366f1, #22d3ee));
+  background-clip: text;
+  color: transparent;
+}
+
+.nav{
+  display: none;
+  gap: 2rem;
+  align-items: center;
+}
+
+.nav-item{
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color .2s;
+}
+
+.nav-item:hover{
+  color: var(--primary);
+}
+
+.actions{
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.connect-button{
+  background: linear-gradient(90deg,#6d28d9,#a78bfa);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow .3s, transform .15s;
+}
+
+.connect-button:hover{
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.menu-button{
+  display: inline-flex;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.mobile-menu{
+  display: block;
+  border-top: 1px solid var(--border-color);
+  background: rgba(10,10,14,0.95);
+  backdrop-filter: blur(var(--backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--backdrop-blur));
+}
+
+.mobile-links{
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-link{
+  display: block;
+  padding: 0.5rem 0.75rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: background .15s, color .15s;
+}
+
+.mobile-link:hover{
+  color: var(--primary);
+  background: rgba(255,255,255,0.03);
+}
+
+@media (min-width: 768px){
+  .nav{ display: flex; }
+  .menu-button{ display: none; }
+  .mobile-menu{ display: none; }
+  .container{ padding: 0 1.5rem; }
+}
+
+@media (min-width: 1024px){
+  .container{ padding: 0 2rem; }
+}
