@@ -1,0 +1,5 @@
+-- Add migration script here
+
+ALTER TABLE token ALTER COLUMN value TYPE TEXT;
+ALTER TABLE nft ALTER COLUMN value TYPE TEXT;
+ALTER TABLE kyc ALTER COLUMN value TYPE TEXT;
