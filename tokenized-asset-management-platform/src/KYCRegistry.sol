@@ -37,8 +37,14 @@ contract KYCRegistry is Ownable {
      * @param account Address to authorize
      */
     function addAuthorizedAddress(address account) public onlyOwner {
-        require(account != address(0), "KYCRegistry: Cannot authorize zero address");
-        require(!_authorizedAddresses[account], "KYCRegistry: Address already authorized");
+        require(
+            account != address(0),
+            "KYCRegistry: Cannot authorize zero address"
+        );
+        require(
+            !_authorizedAddresses[account],
+            "KYCRegistry: Address already authorized"
+        );
         _authorizedAddresses[account] = true;
         emit AuthorizedAddressAdded(account);
     }
@@ -48,7 +54,10 @@ contract KYCRegistry is Ownable {
      * @param account Address to remove authorization
      */
     function removeAuthorizedAddress(address account) public onlyOwner {
-        require(_authorizedAddresses[account], "KYCRegistry: Address not authorized");
+        require(
+            _authorizedAddresses[account],
+            "KYCRegistry: Address not authorized"
+        );
         _authorizedAddresses[account] = false;
         emit AuthorizedAddressRemoved(account);
     }
@@ -67,7 +76,10 @@ contract KYCRegistry is Ownable {
      * @param account Address to verify
      */
     function addKYC(address account) public onlyOwnerOrAuthorized {
-        require(account != address(0), "KYCRegistry: Cannot verify zero address");
+        require(
+            account != address(0),
+            "KYCRegistry: Cannot verify zero address"
+        );
         _kycVerified[account] = true;
         emit KYCAdded(account);
     }
@@ -76,9 +88,14 @@ contract KYCRegistry is Ownable {
      * @dev Add multiple addresses to KYC registry in batch
      * @param accounts Array of addresses to verify
      */
-    function addKYCBatch(address[] calldata accounts) public onlyOwnerOrAuthorized {
+    function addKYCBatch(
+        address[] calldata accounts
+    ) public onlyOwnerOrAuthorized {
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(accounts[i] != address(0), "KYCRegistry: Cannot verify zero address");
+            require(
+                accounts[i] != address(0),
+                "KYCRegistry: Cannot verify zero address"
+            );
             _kycVerified[accounts[i]] = true;
             emit KYCAdded(accounts[i]);
         }
