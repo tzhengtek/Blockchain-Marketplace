@@ -1,0 +1,53 @@
+========================================
+REALVAULT PLATFORM - CONTRACT ADDRESSES
+========================================
+Network: BSC Testnet (Chain ID: 97)
+Owner: 0x99DaBE97d110B9339bC7E74392D1f74cE3f7F02c
+========================================
+
+CORE CONTRACTS
+========================================
+
+KYC Registry:
+0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe
+https://testnet.bscscan.com/address/0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe
+
+RealVault Assets (RVA) - NFT:
+0x5d44D4D77FFc1eb62bcC361F0FA96122620F03B8
+https://testnet.bscscan.com/address/0x5d44D4D77FFc1eb62bcC361F0FA96122620F03B8
+
+RealVault Protocol (RVP) - Token:
+0x9754547A1315C041ABE4682D9301EEbF591C7cB3
+https://testnet.bscscan.com/address/0x9754547A1315C041ABE4682D9301EEbF591C7cB3
+
+AssetMarketplace:
+0x5E801F0D03675912D0C123eAeE28f428EE7aace6
+https://testnet.bscscan.com/address/0x5E801F0D03675912D0C123eAeE28f428EE7aace6
+
+========================================
+PANCAKESWAP INTEGRATION
+========================================
+
+BNB/RVP Liquidity Pair:
+0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7
+https://testnet.bscscan.com/address/0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7
+
+PancakeSwap V2 Router:
+0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+
+Wrapped BNB (WBNB):
+0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd
+
+========================================
+ENV FILE FORMAT
+========================================
+
+KYC_REGISTRY_ADDRESS=0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe
+ASSET_NFT_ADDRESS=0x5d44D4D77FFc1eb62bcC361F0FA96122620F03B8
+ASSET_TOKEN_ADDRESS=0x9754547A1315C041ABE4682D9301EEbF591C7cB3
+MARKETPLACE_ADDRESS=0x5E801F0D03675912D0C123eAeE28f428EE7aace6
+LIQUIDITY_PAIR_ADDRESS=0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7
+PANCAKE_ROUTER_ADDRESS=0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+WBNB_ADDRESS=0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd
+
+========================================

@@ -25,8 +25,8 @@ contract DeployScript is Script {
         // 2. Deploy AssetNFT
         console.log("\n=== Deploying AssetNFT ===");
         AssetNFT assetNFT = new AssetNFT(
-            "Asset NFT",
-            "ANFT",
+            "RealVault Assets",
+            "RVA",
             deployer,
             address(kycRegistry)
         );
@@ -35,8 +35,8 @@ contract DeployScript is Script {
         // 3. Deploy AssetToken
         console.log("\n=== Deploying AssetToken ===");
         AssetToken assetToken = new AssetToken(
-            "Asset Token",
-            "ATK",
+            "RealVault Protocol",
+            "RVP",
             18, // decimals
             1000000, // initial supply (1,000,000 tokens)
             deployer,

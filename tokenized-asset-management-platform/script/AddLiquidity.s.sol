@@ -37,11 +37,11 @@ contract AddLiquidityScript is Script {
 
         console.log("=== PancakeSwap V2 Liquidity Deployment ===");
         console.log("Deployer address:", deployer);
-        console.log("AssetToken address:", assetTokenAddress);
+        console.log("RealVault Protocol (RVP) address:", assetTokenAddress);
         console.log("Deployer BNB balance:", deployer.balance / 10**18, "BNB");
 
         AssetToken assetToken = AssetToken(assetTokenAddress);
-        console.log("AssetToken balance:", assetToken.balanceOf(deployer) / 10**18, "ATK");
+        console.log("RVP Token balance:", assetToken.balanceOf(deployer) / 10**18, "RVP");
 
         // Configuration - adjust these amounts as needed
         uint256 tokenAmount = 10000 * 10**18; // 10,000 tokens
@@ -58,11 +58,11 @@ contract AddLiquidityScript is Script {
         // Check if pair exists, create if it doesn't
         address pair = factory.getPair(assetTokenAddress, WBNB);
         if (pair == address(0)) {
-            console.log("\n=== Creating new BNB/AssetToken pair ===");
+            console.log("\n=== Creating new BNB/RVP pair ===");
             pair = factory.createPair(assetTokenAddress, WBNB);
             console.log("Pair created at:", pair);
         } else {
-            console.log("\n=== BNB/AssetToken pair already exists ===");
+            console.log("\n=== BNB/RVP pair already exists ===");
             console.log("Pair address:", pair);
         }
 
@@ -71,9 +71,9 @@ contract AddLiquidityScript is Script {
         assetToken.approve(PANCAKE_ROUTER, tokenAmount);
         console.log("Approved", tokenAmount / 10**18, "tokens for router");
 
-        // Add liquidity - BNB and AssetToken
-        console.log("\n=== Adding liquidity (BNB + AssetToken) ===");
-        console.log("Token amount:", tokenAmount / 10**18, "ATK");
+        // Add liquidity - BNB and RVP Token
+        console.log("\n=== Adding liquidity (BNB + RVP) ===");
+        console.log("Token amount:", tokenAmount / 10**18, "RVP");
         console.log("BNB amount:", bnbAmount / 10**18, "BNB");
 
         (uint amountToken, uint amountETH, uint liquidity) = router.addLiquidityETH{value: bnbAmount}(
@@ -89,7 +89,7 @@ contract AddLiquidityScript is Script {
 
         // Log results
         console.log("\n=== Liquidity Pool Created Successfully ===");
-        console.log("Tokens added:", amountToken / 10**18, "ATK");
+        console.log("Tokens added:", amountToken / 10**18, "RVP");
         console.log("BNB added:", amountETH / 10**18, "BNB");
         console.log("LP tokens received:", liquidity / 10**18);
         console.log("");
