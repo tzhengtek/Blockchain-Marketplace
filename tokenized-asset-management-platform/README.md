@@ -1,6 +1,6 @@
-# Tokenized Asset Management Platform
+# RealVault - Tokenized Asset Management Platform
 
-A KYC-enabled asset management platform on BSC Testnet with NFT and ERC20 token support.
+A KYC-enabled asset management platform on BSC Testnet featuring **RealVault Protocol (RVP)** token and **RealVault Assets (RVA)** NFTs.
 
 ## Deployed Contracts (BSC Testnet)
 
@@ -8,18 +8,24 @@ A KYC-enabled asset management platform on BSC Testnet with NFT and ERC20 token 
 - **KYCRegistry**: `0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe`
   - [View on BscScan](https://testnet.bscscan.com/address/0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe)
 
-- **AssetNFT**: `0xad6eD2CbBFB45Da005111356Fe280d10a7044371`
-  - [View on BscScan](https://testnet.bscscan.com/address/0xad6eD2CbBFB45Da005111356Fe280d10a7044371)
+- **RealVault Assets (RVA)**: `0x5d44D4D77FFc1eb62bcC361F0FA96122620F03B8`
+  - NFT contract for tokenized real-world assets
+  - [View on BscScan](https://testnet.bscscan.com/address/0x5d44D4D77FFc1eb62bcC361F0FA96122620F03B8)
 
-- **AssetToken (ATK)**: `0x3DC23E01d7B7555970823274054047E521290C23`
-  - [View on BscScan](https://testnet.bscscan.com/address/0x3DC23E01d7B7555970823274054047E521290C23)
+- **RealVault Protocol (RVP)**: `0x9754547A1315C041ABE4682D9301EEbF591C7cB3`
+  - ERC20 utility token for the platform
+  - [View on BscScan](https://testnet.bscscan.com/address/0x9754547A1315C041ABE4682D9301EEbF591C7cB3)
+
+- **AssetMarketplace**: `0x5E801F0D03675912D0C123eAeE28f428EE7aace6`
+  - NFT marketplace with 2.5% platform fee
+  - [View on BscScan](https://testnet.bscscan.com/address/0x5E801F0D03675912D0C123eAeE28f428EE7aace6)
 
 ### PancakeSwap V2 Liquidity Pool
-- **BNB/ATK Pair**: `0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7`
+- **BNB/RVP Pair**: `0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7`
   - [View on BscScan](https://testnet.bscscan.com/address/0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7)
   - [View on PancakeSwap](https://pancakeswap.finance/info/v2/pairs/0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7)
-  - **Liquidity**: 10,000 ATK + 0.1 BNB
-  - **Initial Price**: 1 ATK = 0.00001 BNB
+  - **Liquidity**: 10,000 RVP + 0.1 BNB
+  - **Initial Price**: 1 RVP = 0.00001 BNB
 
 ### Owner Address
 - **Deployer/Owner**: `0x99DaBE97d110B9339bC7E74392D1f74cE3f7F02c`
