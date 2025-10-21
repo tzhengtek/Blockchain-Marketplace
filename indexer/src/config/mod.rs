@@ -1,3 +1,4 @@
-pub mod settings;
-pub use settings::Settings;
-pub use settings::Contract;
+mod settings;
+
+pub use settings::{ContractSettings, Settings};
+

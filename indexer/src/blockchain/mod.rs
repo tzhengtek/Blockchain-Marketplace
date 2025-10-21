@@ -1,2 +1,3 @@
-pub mod provider;
+mod provider;
+
 pub use provider::BlockchainIndexer;

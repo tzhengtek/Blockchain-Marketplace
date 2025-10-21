@@ -1,3 +1,4 @@
+use alloy::primitives::address;
 use eyre::Result;
 use std::error::Error;
 
@@ -15,6 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(setting) => setting,
         Err(e) => panic!("{}", e),
     };
+
     println!("{:?}", settings);
     let pool = DatabasePool::new(&settings.database_url).await?;
     let indexer = BlockchainIndexer::new(&settings).await?;
