@@ -77,7 +77,11 @@ impl BlockchainIndexer {
         let private_key = &settings.wallet_private_key;
         let signer: PrivateKeySigner = private_key.parse()?;
         let wallet = EthereumWallet::from(signer);
-        let provider = ProviderBuilder::new().wallet(wallet).connect_ws(ws).await?;
+        let provider = ProviderBuilder::default()
+            .with_gas_estimation()
+            .wallet(wallet)
+            .connect_ws(ws)
+            .await?;
         let kyc_contract = KYC::new(settings.contract.kyc_address, provider.clone());
         tracing::info!(": SUCCESS !");
         Ok(Self {
@@ -98,7 +102,49 @@ impl BlockchainIndexer {
             .map_err(|_| Error::msg("Error while converting address"))?;
 
         tracing::info!("Adding address to KYC...");
-        let _ = self.kyc_contract.addKYC(user_address).send().await?;
+        let pending_tx = self.kyc_contract.addKYC(user_address).send().await;
+
+        // // Log transaction hash immediately
+        // let tx_hash = pending_tx.tx_hash();
+        // tracing::info!("Transaction sent! Hash: {:?}", tx_hash);
+        //
+        // // Wait for transaction to be mined
+        // let receipt = pending_tx.get_receipt().await?;
+        // if let Some(logs) = &receipt.logs {
+        //     if !logs.is_empty() {
+        //         tracing::info!("✅ Transaction emitted logs! Looks successful.");
+        //     } else {
+        //         tracing::warn!(
+        //             "Transaction mined but no logs found — might have reverted silently."
+        //         );
+        //     }
+        // }
+        // let receipt = pending_tx.get_receipt().await?;
+        // tracing::info!(
+        //     "✅ Transaction mined! Hash: {:?}-{:?}",
+        //     receipt.transaction_hash,
+        //     receipt.from
+        // );
+
+        // let tx_hash = pending_tx.tx_hash();
+        // tracing::info!("Transaction sent! Hash: {:?}", tx_hash);
+        Ok(())
+    }
+
+    pub async fn remove_kyc(&self, user_address: &String) -> Result<()> {
+        let user_address = Address::from_str(&user_address)
+            .map_err(|_| Error::msg("Error while converting address"))?;
+        tracing::info!("ADDRESS {:?}", user_address);
+
+        tracing::info!("Remove address to KYC...");
+        let pending_tx = self.kyc_contract.revokeKYC(user_address).send().await?;
+        let receipt = pending_tx.get_receipt().await?; // wait until mined
+        // let receipt = pending_tx.get_receipt().await?;
+        // tracing::info!(
+        //     "✅ Transaction mined! Hash: {:?} - {:?}",
+        //     receipt.transaction_hash,
+        //     receipt.from
+        // );
         Ok(())
     }
 

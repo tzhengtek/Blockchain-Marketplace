@@ -3,6 +3,15 @@ name = "indexer"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "indexer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "indexer"
+path = "src/main.rs"
+required-features = ["build_bin"]  # disable unless explicitly enabled
+
 [dependencies]
 colored = "3.0.0"
 config = { version = "0.15.18", features = ["toml"] }

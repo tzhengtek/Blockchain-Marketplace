@@ -5,7 +5,8 @@ use axum::Json;
 use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::routing::get;
+use axum::response::{IntoResponse, Response};
+use axum::routing::{delete, get, post};
 use database::TransactionEvent;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::filter::EnvFilter;
@@ -40,8 +41,8 @@ async fn main() -> Result<()> {
     println!("{:?}", settings);
 
     let indexer = BlockchainIndexer::new(&settings).await?;
-
     let pool = DatabasePool::new(&database_url).await?;
+
     let shared_state = Arc::new(AppState(pool, indexer));
 
     tracing::info!("Routes Initialization...");
@@ -61,16 +62,54 @@ struct KYCRequest {
     wallet_address: String,
 }
 
+struct AppError(anyhow::Error);
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        // Log the full error
+        tracing::error!("Internal server error: {:?}", self.0);
+
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Something went wrong".to_string(),
+        )
+            .into_response()
+    }
+}
+
+impl<E> From<E> for AppError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
 fn api_router(shared_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/verify", get(verify_kyc))
+        .route("/kyc", post(add_wallet_kyc))
         .route("/transaction", get(get_transaction))
+        .route("/kyc", delete(remove_wallet_kyc))
         .with_state(shared_state)
 }
 
-async fn verify_kyc(Query(payload): Query<KYCRequest>, State(state): State<Arc<AppState>>) {
-    let _ = state.1.add_kyc(&payload.wallet_address).await;
+async fn add_wallet_kyc(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<KYCRequest>,
+) -> Result<StatusCode, AppError> {
+    let _ = state.1.add_kyc(&payload.wallet_address).await?;
     tracing::info!("{:?}", payload.wallet_address);
+    Ok(StatusCode::CREATED)
+}
+
+async fn remove_wallet_kyc(
+    Query(payload): Query<KYCRequest>,
+    State(state): State<Arc<AppState>>,
+) -> Result<StatusCode, AppError> {
+    let _ = state.1.remove_kyc(&payload.wallet_address).await?;
+    tracing::info!("Remove {:?} from KYC", payload.wallet_address);
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn get_transaction(
