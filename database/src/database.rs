@@ -59,7 +59,7 @@ impl From<PgPool> for DatabasePool {
 
 impl DatabasePool {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
-        print!("Connection to the database...");
+        tracing::info!("Connection to the database...");
         let provider: PgPool = PgPool::connect(database_url).await?;
         tracing::info!(": SUCCESS !");
         Ok(Self(provider))
@@ -78,7 +78,7 @@ impl DatabasePool {
     }
 
     pub async fn add_transaction(&self, transaction: TransactionEvent) -> Result<(), sqlx::Error> {
-        print!("Adding transaction...");
+        tracing::info!("Adding transaction...");
         let insert_transaction_into = format!(
             "INSERT INTO token (
                     transaction_hash, 
@@ -126,6 +126,7 @@ impl DatabasePool {
         let get_transaction_request = format!(
             "SELECT * FROM token WHERE 1=1 {filter_contract} {filter_from} {filter_to} {filter_transaction} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
         );
+        tracing::info!("Fetching transaction from database...");
         let results = query_as::<_, TransactionEvent>(&get_transaction_request)
             .bind(transaction_params.limit)
             .bind(cmp::max(transaction_params.pagination - 1, 0) * transaction_params.limit)

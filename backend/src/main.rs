@@ -13,6 +13,9 @@ use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, layer::SubscriberExt};
 
+use http::Method;
+use tower_http::cors::{Any, CorsLayer};
+
 use anyhow::{Error, Result};
 use database::{DatabasePool, TransactionParams};
 use dotenv::dotenv;
@@ -100,6 +103,10 @@ where
 }
 
 fn api_router(shared_state: Arc<AppState>) -> Router {
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::DELETE])
+        .allow_origin(Any);
+
     Router::new()
         .route(
             "/kyc",
@@ -109,6 +116,7 @@ fn api_router(shared_state: Arc<AppState>) -> Router {
         )
         .route("/transaction", get(get_transaction))
         .with_state(shared_state)
+        .layer(cors)
 }
 
 #[derive(Serialize, ToSchema)]
@@ -192,6 +200,7 @@ async fn get_transaction(
     Query(params): Query<TransactionParams>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<TransactionListReponse>, (StatusCode, String)> {
+    tracing::info!("Getting Transaction...");
     match state.0.get_transaction(&params).await {
         Ok((count, transactions)) => Ok(Json(TransactionListReponse {
             total: count,
