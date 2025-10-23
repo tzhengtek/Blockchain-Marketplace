@@ -10,7 +10,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "indexer"
 path = "src/main.rs"
-required-features = ["build_bin"]  # disable unless explicitly enabled
 
 [dependencies]
 colored = "3.0.0"
