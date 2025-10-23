@@ -192,6 +192,7 @@ async fn get_transaction(
     Query(params): Query<TransactionParams>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<TransactionListReponse>, (StatusCode, String)> {
+    tracing::info!("Getting Transaction...");
     match state.0.get_transaction(&params).await {
         Ok((count, transactions)) => Ok(Json(TransactionListReponse {
             total: count,
