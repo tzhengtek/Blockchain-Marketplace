@@ -120,7 +120,7 @@ impl DatabasePool {
             None => "".to_string(),
         };
         let filter_to = match &transaction_params.to {
-            Some(address) => format!("AND WHERE to='{}'", address),
+            Some(address) => format!("AND to='{}'", address),
             None => "".to_string(),
         };
         let get_transaction_request = format!(

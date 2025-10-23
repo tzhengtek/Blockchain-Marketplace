@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .nest("/api", app_routes);
-    tracing::info!("Routes Initizalized !");
+    tracing::info!("Routes Initialized !");
 
     tracing::info!("Server listening on http://localhost:3000");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

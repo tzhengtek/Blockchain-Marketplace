@@ -3,7 +3,6 @@ use std::error::Error;
 
 mod blockchain;
 mod config;
-use database;
 
 use blockchain::BlockchainIndexer;
 use config::Settings;
