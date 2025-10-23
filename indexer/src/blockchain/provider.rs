@@ -1,5 +1,6 @@
 use alloy::{
     eips::BlockNumberOrTag,
+    network::Ethereum,
     providers::{
         Identity, Provider, ProviderBuilder, RootProvider, WsConnect,
         fillers::{
@@ -77,8 +78,7 @@ impl BlockchainIndexer {
         let private_key = &settings.wallet_private_key;
         let signer: PrivateKeySigner = private_key.parse()?;
         let wallet = EthereumWallet::from(signer);
-        let provider = ProviderBuilder::default()
-            .with_gas_estimation()
+        let provider = ProviderBuilder::new_with_network::<Ethereum>()
             .wallet(wallet)
             .connect_ws(ws)
             .await?;
@@ -90,61 +90,57 @@ impl BlockchainIndexer {
         })
     }
 
-    pub async fn check_kyc(&self, address: Address) -> Result<()> {
+    pub async fn check_kyc(&self, user_address: &String) -> Result<bool> {
         tracing::info!("Checking the address KYC...");
-        let val = self.kyc_contract.isKYCVerified(address).call().await?;
-        tracing::debug!("CHECK KYC : {val:?}");
-        Ok(())
+        let user_address = Address::from_str(&user_address)
+            .map_err(|_| Error::msg("Error while converting address"))?;
+
+        let val = self.kyc_contract.isKYCVerified(user_address).call().await?;
+        Ok(val)
     }
 
     pub async fn add_kyc(&self, user_address: &String) -> Result<()> {
         let user_address = Address::from_str(&user_address)
             .map_err(|_| Error::msg("Error while converting address"))?;
 
-        tracing::info!("Adding address to KYC...");
-        let pending_tx = self.kyc_contract.addKYC(user_address).send().await;
-
-        // // Log transaction hash immediately
-        // let tx_hash = pending_tx.tx_hash();
-        // tracing::info!("Transaction sent! Hash: {:?}", tx_hash);
-        //
-        // // Wait for transaction to be mined
-        // let receipt = pending_tx.get_receipt().await?;
-        // if let Some(logs) = &receipt.logs {
-        //     if !logs.is_empty() {
-        //         tracing::info!("✅ Transaction emitted logs! Looks successful.");
-        //     } else {
-        //         tracing::warn!(
-        //             "Transaction mined but no logs found — might have reverted silently."
-        //         );
-        //     }
-        // }
-        // let receipt = pending_tx.get_receipt().await?;
-        // tracing::info!(
-        //     "✅ Transaction mined! Hash: {:?}-{:?}",
-        //     receipt.transaction_hash,
-        //     receipt.from
-        // );
-
-        // let tx_hash = pending_tx.tx_hash();
-        // tracing::info!("Transaction sent! Hash: {:?}", tx_hash);
+        let tx = self
+            .kyc_contract
+            .addKYC(user_address)
+            .gas_price(100_000_000u128);
+        let sendable_tx = tx.with_cloned_provider();
+        let pending_tx = sendable_tx.send().await?;
+        tracing::info!("Transaction sent! Hash: {:?}", pending_tx.tx_hash());
+        tokio::spawn(async move {
+            match pending_tx.get_receipt().await {
+                Ok(receipt) => {
+                    tracing::info!("Transaction mined! Hash: {:?}", receipt.transaction_hash)
+                }
+                Err(e) => tracing::error!("Error while waiting for receipt: {:?}", e),
+            }
+        });
         Ok(())
     }
 
     pub async fn remove_kyc(&self, user_address: &String) -> Result<()> {
         let user_address = Address::from_str(&user_address)
             .map_err(|_| Error::msg("Error while converting address"))?;
-        tracing::info!("ADDRESS {:?}", user_address);
 
-        tracing::info!("Remove address to KYC...");
-        let pending_tx = self.kyc_contract.revokeKYC(user_address).send().await?;
-        let receipt = pending_tx.get_receipt().await?; // wait until mined
-        // let receipt = pending_tx.get_receipt().await?;
-        // tracing::info!(
-        //     "✅ Transaction mined! Hash: {:?} - {:?}",
-        //     receipt.transaction_hash,
-        //     receipt.from
-        // );
+        tracing::info!("Revoking KYC");
+        let tx = self
+            .kyc_contract
+            .revokeKYC(user_address)
+            .gas_price(100_000_000u128);
+        let sendable_tx = tx.with_cloned_provider();
+        let pending_tx = sendable_tx.send().await?;
+        tracing::info!("Transaction sent! Hash: {:?}", pending_tx.tx_hash());
+        tokio::spawn(async move {
+            match pending_tx.get_receipt().await {
+                Ok(receipt) => {
+                    tracing::info!("Transaction mined! Hash: {:?}", receipt.transaction_hash)
+                }
+                Err(e) => tracing::error!("Error while waiting for receipt: {:?}", e),
+            }
+        });
         Ok(())
     }
 

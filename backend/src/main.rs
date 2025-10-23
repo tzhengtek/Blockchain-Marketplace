@@ -66,7 +66,6 @@ struct AppError(anyhow::Error);
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        // Log the full error
         tracing::error!("Internal server error: {:?}", self.0);
 
         (
@@ -88,10 +87,20 @@ where
 
 fn api_router(shared_state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/kyc", get(check_wallet_kyc))
         .route("/kyc", post(add_wallet_kyc))
         .route("/transaction", get(get_transaction))
         .route("/kyc", delete(remove_wallet_kyc))
         .with_state(shared_state)
+}
+
+async fn check_wallet_kyc(
+    Query(payload): Query<KYCRequest>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<bool>, AppError> {
+    let kyc_state = state.1.check_kyc(&payload.wallet_address).await?;
+    tracing::info!("Check {:?} from KYC", payload.wallet_address);
+    Ok(Json(kyc_state))
 }
 
 async fn add_wallet_kyc(
