@@ -10,7 +10,9 @@ const INSERT_INTO_BLOCK: &str = "
                 RETURNING id;
             ";
 
-#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
+use utoipa::ToSchema;
+
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
 pub struct TransactionEvent {
     pub transaction_hash: String,
     pub from_address: String,

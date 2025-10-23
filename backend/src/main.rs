@@ -6,7 +6,7 @@ use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::get;
 use database::TransactionEvent;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::filter::EnvFilter;
@@ -17,6 +17,8 @@ use anyhow::{Error, Result};
 use database::{DatabasePool, TransactionParams};
 use dotenv::dotenv;
 use indexer::{BlockchainIndexer, Settings};
+
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Clone)]
 struct AppState(DatabasePool, BlockchainIndexer);
@@ -47,7 +49,9 @@ async fn main() -> Result<()> {
 
     tracing::info!("Routes Initialization...");
     let app_routes = api_router(shared_state);
-    let app = Router::new().nest("/api", app_routes);
+    let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .nest("/api", app_routes);
     tracing::info!("Routes Initizalized !");
 
     tracing::info!("Server listening on http://localhost:3000");
@@ -57,10 +61,20 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Deserialize, Serialize)]
+use utoipa::OpenApi;
+use utoipa::ToSchema;
+
+#[derive(Serialize, Deserialize, ToSchema)]
 struct KYCRequest {
     wallet_address: String,
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+    paths(check_wallet_kyc, add_wallet_kyc, remove_wallet_kyc, get_transaction),
+    components(schemas(KYCRequest))
+)]
+struct ApiDoc;
 
 struct AppError(anyhow::Error);
 
@@ -87,13 +101,37 @@ where
 
 fn api_router(shared_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/kyc", get(check_wallet_kyc))
-        .route("/kyc", post(add_wallet_kyc))
+        .route(
+            "/kyc",
+            get(check_wallet_kyc)
+                .post(add_wallet_kyc)
+                .delete(remove_wallet_kyc),
+        )
         .route("/transaction", get(get_transaction))
-        .route("/kyc", delete(remove_wallet_kyc))
         .with_state(shared_state)
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct TransactionEventResponse {
+    pub transaction_hash: String,
+    pub from_address: String,
+    pub to_address: String,
+    pub timestamp: Option<String>, // ISO 8601 string for Swagger
+    pub value: String,
+    pub block_id: i32,
+    pub contract_address: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/kyc",
+    params(
+        ("wallet_address" = String, Query, description = "Wallet to check KYC")
+    ),
+    responses(
+        (status = 200, description = "KYC status", body = bool)
+    )
+)]
 async fn check_wallet_kyc(
     Query(payload): Query<KYCRequest>,
     State(state): State<Arc<AppState>>,
@@ -103,6 +141,14 @@ async fn check_wallet_kyc(
     Ok(Json(kyc_state))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/kyc",
+    request_body = KYCRequest,
+    responses(
+        (status = 201, description = "Wallet added to KYC")
+    )
+)]
 async fn add_wallet_kyc(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<KYCRequest>,
@@ -112,6 +158,16 @@ async fn add_wallet_kyc(
     Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/kyc",
+    params(
+        ("wallet_address" = String, Query, description = "Wallet to remove from KYC")
+    ),
+    responses(
+        (status = 204, description = "Wallet removed from KYC")
+    )
+)]
 async fn remove_wallet_kyc(
     Query(payload): Query<KYCRequest>,
     State(state): State<Arc<AppState>>,
@@ -121,6 +177,18 @@ async fn remove_wallet_kyc(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/transaction",
+    params(
+        ("wallet_address" = String, Query, description = "Wallet address to query transactions"),
+        ("limit" = Option<u32>, Query, description = "Optional limit for number of results")
+    ),
+    responses(
+        (status = 200, description = "Transactions retrieved", body = [TransactionEvent]),
+        (status = 502, description = "Error fetching transactions")
+    )
+)]
 async fn get_transaction(
     Query(params): Query<TransactionParams>,
     State(state): State<Arc<AppState>>,
