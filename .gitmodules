@@ -1,3 +1,6 @@
 [submodule "tokenized-asset-management-platform/lib/forge-std"]
 	path = tokenized-asset-management-platform/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "tokenized-asset-management-platform/tokenized-asset-management-platform/lib/openzeppelin-contracts"]
+	path = tokenized-asset-management-platform/tokenized-asset-management-platform/lib/openzeppelin-contracts
+	url = git@github.com:EpitechPGE45-2025/G-ING-910-PAR-9-1-blockchain-13.git

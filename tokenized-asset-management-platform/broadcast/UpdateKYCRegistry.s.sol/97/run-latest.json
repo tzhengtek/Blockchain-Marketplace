@@ -1,0 +1,153 @@
+{
+  "transactions": [
+    {
+      "hash": "0x30957d76f7496e755ceeebc6e3c1f2c0dd2f9a31330b34bc9ff81b27cee2ab22",
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x5d44d4d77ffc1eb62bcc361f0fa96122620f03b8",
+      "function": "updateKYCRegistry(address)",
+      "arguments": [
+        "0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe"
+      ],
+      "transaction": {
+        "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+        "to": "0x5d44d4d77ffc1eb62bcc361f0fa96122620f03b8",
+        "gas": "0xad0a",
+        "value": "0x0",
+        "input": "0x7817bbe20000000000000000000000007a9c49c5a1dee1e783c8ef5cce92a49807d2acbe",
+        "nonce": "0x25",
+        "chainId": "0x61"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x6c21c5761d0c9ee97cf9fd189e1746d18dff95a52b6817be1b9dc051dc966478",
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x9754547a1315c041abe4682d9301eebf591c7cb3",
+      "function": "updateKYCRegistry(address)",
+      "arguments": [
+        "0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe"
+      ],
+      "transaction": {
+        "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+        "to": "0x9754547a1315c041abe4682d9301eebf591c7cb3",
+        "gas": "0xa312",
+        "value": "0x0",
+        "input": "0x7817bbe20000000000000000000000007a9c49c5a1dee1e783c8ef5cce92a49807d2acbe",
+        "nonce": "0x26",
+        "chainId": "0x61"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": "0x6c584832529a4b13755308e097915dba5a3656893a3a59d7dd72f4d301955b9e",
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x5e801f0d03675912d0c123eaee28f428ee7aace6",
+      "function": "updateKYCRegistry(address)",
+      "arguments": [
+        "0x7a9C49C5A1DEE1E783c8eF5cce92a49807D2Acbe"
+      ],
+      "transaction": {
+        "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+        "to": "0x5e801f0d03675912d0c123eaee28f428ee7aace6",
+        "gas": "0x9c75",
+        "value": "0x0",
+        "input": "0x7817bbe20000000000000000000000007a9c49c5a1dee1e783c8ef5cce92a49807d2acbe",
+        "nonce": "0x27",
+        "chainId": "0x61"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [
+    {
+      "status": "0x1",
+      "cumulativeGasUsed": "0xc85a",
+      "logs": [
+        {
+          "address": "0x5d44d4d77ffc1eb62bcc361f0fa96122620f03b8",
+          "topics": [
+            "0x5268412727b29376649bbce2d2c752796cba62c077749cd8f360a82e058e4640",
+            "0x0000000000000000000000007a9c49c5a1dee1e783c8ef5cce92a49807d2acbe"
+          ],
+          "data": "0x",
+          "blockHash": "0x9c4104848314473f6ee084a5ce3bc5246862005bed1729296b85af995e401e50",
+          "blockNumber": "0x426b1c0",
+          "transactionHash": "0x30957d76f7496e755ceeebc6e3c1f2c0dd2f9a31330b34bc9ff81b27cee2ab22",
+          "transactionIndex": "0x1",
+          "logIndex": "0x0",
+          "removed": false
+        }
+      ],
+      "logsBloom": "0x00000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000080000001000000002000000000000000000000800000000000000000000000040000000000000000000000000000000",
+      "type": "0x0",
+      "transactionHash": "0x30957d76f7496e755ceeebc6e3c1f2c0dd2f9a31330b34bc9ff81b27cee2ab22",
+      "transactionIndex": "0x1",
+      "blockHash": "0x9c4104848314473f6ee084a5ce3bc5246862005bed1729296b85af995e401e50",
+      "blockNumber": "0x426b1c0",
+      "gasUsed": "0x7652",
+      "effectiveGasPrice": "0x5f5e100",
+      "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+      "to": "0x5d44d4d77ffc1eb62bcc361f0fa96122620f03b8",
+      "contractAddress": null
+    },
+    {
+      "status": "0x1",
+      "cumulativeGasUsed": "0x13e6a",
+      "logs": [
+        {
+          "address": "0x9754547a1315c041abe4682d9301eebf591c7cb3",
+          "topics": [
+            "0x5268412727b29376649bbce2d2c752796cba62c077749cd8f360a82e058e4640",
+            "0x0000000000000000000000007a9c49c5a1dee1e783c8ef5cce92a49807d2acbe"
+          ],
+          "data": "0x",
+          "blockHash": "0x9c4104848314473f6ee084a5ce3bc5246862005bed1729296b85af995e401e50",
+          "blockNumber": "0x426b1c0",
+          "transactionHash": "0x6c21c5761d0c9ee97cf9fd189e1746d18dff95a52b6817be1b9dc051dc966478",
+          "transactionIndex": "0x2",
+          "logIndex": "0x1",
+          "removed": false
+        }
+      ],
+      "logsBloom": "0x00000000000000000000000000000020000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000080000000100000002000000000000000000000000000000000000000000000040020000000000000000000000000000",
+      "type": "0x0",
+      "transactionHash": "0x6c21c5761d0c9ee97cf9fd189e1746d18dff95a52b6817be1b9dc051dc966478",
+      "transactionIndex": "0x2",
+      "blockHash": "0x9c4104848314473f6ee084a5ce3bc5246862005bed1729296b85af995e401e50",
+      "blockNumber": "0x426b1c0",
+      "gasUsed": "0x7610",
+      "effectiveGasPrice": "0x5f5e100",
+      "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+      "to": "0x9754547a1315c041abe4682d9301eebf591c7cb3",
+      "contractAddress": null
+    },
+    {
+      "status": "0x1",
+      "cumulativeGasUsed": "0x1afb0",
+      "logs": [],
+      "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "type": "0x0",
+      "transactionHash": "0x6c584832529a4b13755308e097915dba5a3656893a3a59d7dd72f4d301955b9e",
+      "transactionIndex": "0x3",
+      "blockHash": "0x9c4104848314473f6ee084a5ce3bc5246862005bed1729296b85af995e401e50",
+      "blockNumber": "0x426b1c0",
+      "gasUsed": "0x7146",
+      "effectiveGasPrice": "0x5f5e100",
+      "from": "0x99dabe97d110b9339bc7e74392d1f74ce3f7f02c",
+      "to": "0x5e801f0d03675912d0c123eaee28f428ee7aace6",
+      "contractAddress": null
+    }
+  ],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1761079338563,
+  "chain": 97,
+  "commit": "0c6bbc9"
+}
