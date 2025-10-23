@@ -1,0 +1,34 @@
+.section {
+  padding-bottom: 10rem;
+}
+
+.section_header,
+.data_container {
+  display: grid;
+  grid-template-columns:
+    180px
+    180px
+    180px
+    180px
+    180px
+    180px
+    180px
+    180px;
+  align-items: center;
+  column-gap: 22px;
+}
+
+.section_header {
+  font-weight: 600;
+  padding: 10px 16px;
+  border-bottom: 1px solid #242936;
+}
+
+.data_container {
+  padding: 14px 16px;
+  border-bottom: 1px solid #242936;
+  background: transparent;
+}
+.data_container:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

@@ -1,19 +1,16 @@
 import Header from "./header/header";
 import Swap from "./swap/swap";
+import Transaction from "./transaction/transaction";
+import Exchange from "./exchange/exchange";
 
-export default function Home() {
+export default function App() {
   return (
     <div style={{ backgroundColor: "#190f5c60", minHeight: "100vh" }}>
       <Header />
-      <main
-        style={{
-          height: "calc(100vh - 64px)",
-          overflowY: "auto",
-          WebkitOverflowScrolling: "touch",
-          padding: "1rem",
-        }}
-      >
+      <main>
         <Swap />
+        <Transaction />
+        {/* <Exchange /> */}
       </main>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import { JSX, useState } from "react";
 import "./swap.css";
-import { Field, Input, NumberInput } from "@chakra-ui/react";
 
 type Token = {
   symbol: string;
@@ -98,7 +97,6 @@ export default function Swap(): JSX.Element {
               ></button>
             </div>
 
-            {/* To */}
             <div className="fieldGroup">
               <div className="labelRow">
                 <span>To</span>
@@ -147,45 +145,3 @@ export default function Swap(): JSX.Element {
     </section>
   );
 }
-
-// import { JSX } from "react";
-// import "./swap.css";
-// import { Field, Input, NumberInput } from "@chakra-ui/react";
-
-// export default function Swap(): JSX.Element {
-//   return (
-
-//     // <div className="container">
-//     //   <div className="inner">
-//     //     <div className="inner-collumn">
-//     //       <div className="title-wrap">
-//     //         <span className="swap-title">Swap Tokens</span>
-//     //       </div>
-//     //       <div className="input-wrap">
-//     //         <Field.Root>
-//     //           <Field.Label>From</Field.Label>
-//     //           <NumberInput.Root defaultValue="0" width="200px" min={0}>
-//     //             <NumberInput.Control />
-//     //             <NumberInput.Input />
-//     //           </NumberInput.Root>
-//     //         </Field.Root>
-//     //       </div>
-//     //       <div className="input-wrap">
-//     //         <Field.Root>
-//     //           <Field.Label>From</Field.Label>
-//     //           <NumberInput.Root defaultValue="0" width="200px" min={0}>
-//     //             <NumberInput.Control />
-//     //             <NumberInput.Input />
-//     //           </NumberInput.Root>
-//     //         </Field.Root>
-//     //       </div>
-//     //       <div className="actions">
-//     //         <button type="button" className="swap-button">
-//     //           Swap tokens
-//     //         </button>
-//     //       </div>
-//     //     </div>
-//     //   </div>
-//     // </div>
-//   );
-// }
