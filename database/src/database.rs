@@ -106,7 +106,7 @@ impl DatabasePool {
     pub async fn get_transaction(
         &self,
         transaction_params: &TransactionParams,
-    ) -> Result<Vec<TransactionEvent>, sqlx::Error> {
+    ) -> Result<(u64, Vec<TransactionEvent>), sqlx::Error> {
         let filter_contract = match &transaction_params.contract_address {
             Some(address) => format!("AND contract_address='{}'", address),
             None => "".to_string(),
@@ -131,6 +131,9 @@ impl DatabasePool {
             .bind(cmp::max(transaction_params.pagination - 1, 0) * transaction_params.limit)
             .fetch_all(&self.0)
             .await?;
-        Ok(results)
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM token")
+            .fetch_one(&self.0)
+            .await?;
+        Ok((count as u64, results))
     }
 }

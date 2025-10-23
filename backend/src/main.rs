@@ -112,14 +112,9 @@ fn api_router(shared_state: Arc<AppState>) -> Router {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct TransactionEventResponse {
-    pub transaction_hash: String,
-    pub from_address: String,
-    pub to_address: String,
-    pub timestamp: Option<String>, // ISO 8601 string for Swagger
-    pub value: String,
-    pub block_id: i32,
-    pub contract_address: String,
+pub struct TransactionListReponse {
+    total: u64,
+    transactions: Vec<TransactionEvent>,
 }
 
 #[utoipa::path(
@@ -181,20 +176,27 @@ async fn remove_wallet_kyc(
     get,
     path = "/api/transaction",
     params(
-        ("wallet_address" = String, Query, description = "Wallet address to query transactions"),
-        ("limit" = Option<u32>, Query, description = "Optional limit for number of results")
+        ("transaction_address" = Option<String>, Query, description = "Transaction address to query transactions"),
+        ("contract_address" = Option<String>, Query, description = "Wallet address to query contract"),
+        ("limit" = Option<u32>, Query, description = "Optional limit for number of results"),
+        ("pagination" = Option<u32>, Query, description = "Optional pagination for chunk of limited number of results"),
+        ("from" = Option<String>, Query, description = "Optional 'from' in the transaction"),
+        ("to" = Option<String>, Query, description = "Optional 'to' in the transaction"),
     ),
     responses(
-        (status = 200, description = "Transactions retrieved", body = [TransactionEvent]),
+        (status = 200, description = "Transactions retrieved", body = [TransactionListReponse]),
         (status = 502, description = "Error fetching transactions")
     )
 )]
 async fn get_transaction(
     Query(params): Query<TransactionParams>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<TransactionEvent>>, (StatusCode, String)> {
+) -> Result<Json<TransactionListReponse>, (StatusCode, String)> {
     match state.0.get_transaction(&params).await {
-        Ok(res) => Ok(Json(res)),
+        Ok((count, transactions)) => Ok(Json(TransactionListReponse {
+            total: count,
+            transactions: transactions,
+        })),
         Err(e) => Err((
             StatusCode::BAD_GATEWAY,
             format!("Error while retrieving transaction {e:?}"),
