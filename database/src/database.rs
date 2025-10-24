@@ -13,6 +13,40 @@ const INSERT_INTO_BLOCK: &str = "
 use utoipa::ToSchema;
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
+pub struct NFTEvent {
+    pub owner: String,
+    pub token_id: i32,
+    pub contract_address: String,
+}
+
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
+pub struct ListedNFT {
+    pub seller: String,
+    pub token_id: i32,
+    pub nft_address: String,
+    pub price: i32,
+}
+
+#[serde_with::serde_as]
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct NFTParams {
+    pagination: i64,
+    limit: i64,
+    owner: Option<String>,
+}
+
+impl Default for NFTParams {
+    fn default() -> Self {
+        Self {
+            pagination: 1,
+            limit: 50,
+            owner: None,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
 pub struct TransactionEvent {
     pub transaction_hash: String,
     pub from_address: String,
@@ -63,6 +97,13 @@ impl DatabasePool {
         let provider: PgPool = PgPool::connect(database_url).await?;
         tracing::info!(": SUCCESS !");
         Ok(Self(provider))
+    }
+
+    pub async fn get_listing_nft(&self) -> Result<Vec<ListedNFT>, sqlx::Error> {
+        let res = sqlx::query_as::<_, ListedNFT>("SELECT * FROM marketplace")
+            .fetch_all(&self.0)
+            .await?;
+        Ok(res)
     }
 
     pub async fn solding_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
@@ -159,6 +200,29 @@ impl DatabasePool {
             .await?;
         tracing::info!(": SUCCESS !");
         Ok(())
+    }
+
+    pub async fn get_nft(
+        &self,
+        nft_params: &NFTParams,
+    ) -> Result<(u64, Vec<NFTEvent>), sqlx::Error> {
+        let filter_owner = match &nft_params.owner {
+            Some(owner) => format!("AND owner='{}'", owner),
+            None => "".to_string(),
+        };
+        let get_nft_request = format!(
+            "SELECT * FROM nft WHERE 1=1 {filter_owner} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
+        );
+        let results = query_as::<_, NFTEvent>(&get_nft_request)
+            .bind(nft_params.limit)
+            .bind(cmp::max(nft_params.pagination - 1, 0) * nft_params.limit)
+            .fetch_all(&self.0)
+            .await?;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM nft")
+            .fetch_one(&self.0)
+            .await?;
+        Ok((count as u64, results))
     }
 
     pub async fn get_transaction(
