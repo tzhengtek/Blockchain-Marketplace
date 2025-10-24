@@ -17,6 +17,7 @@ export function Header({ projectName }: HeaderProps) {
     { label: "Home", href: "/" },
     { label: "Swap", href: "/swap" },
     { label: "KYC", href: "/kyc" },
+    { label: "Transaction", href: "/transaction" },
   ];
 
   return (
