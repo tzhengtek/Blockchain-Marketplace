@@ -105,21 +105,6 @@ pub struct BlockchainIndexer {
             RootProvider,
         >,
     >,
-    market_contract: MARKET::MARKETInstance<
-        FillProvider<
-            JoinFill<
-                JoinFill<
-                    Identity,
-                    JoinFill<
-                        GasFiller,
-                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                    >,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            RootProvider,
-        >,
-    >,
     nft_address: Address,
     token_address: Address,
 }
@@ -141,12 +126,10 @@ impl BlockchainIndexer {
 
         let kyc_contract = KYC::new(settings.contract.kyc_address, provider.clone());
         let oracle_contract = ORACLE::new(settings.contract.oracle_address, provider.clone());
-        let market_contract = MARKET::new(settings.contract.market_address, provider.clone());
         Ok(Self {
             provider,
             kyc_contract,
             oracle_contract,
-            market_contract,
             nft_address: settings.contract.nft_address,
             token_address: settings.contract.token_address,
         })
