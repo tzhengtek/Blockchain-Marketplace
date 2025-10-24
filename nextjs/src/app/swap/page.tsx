@@ -89,15 +89,15 @@ const TOKENS: readonly TokenInfo[] = [
 
 /* -------------------- AMM math (direct pair) -------------------- */
 /** Fee 0.25% like Pancake v2. */
-const FEE_NUM = 9975n;
-const FEE_DEN = 10000n;
+const FEE_NUM = BigInt(9975);
+const FEE_DEN = BigInt(10000);
 
 function getAmountOut(amountIn: bigint, reserveIn: bigint, reserveOut: bigint) {
-  if (amountIn <= 0n || reserveIn <= 0n || reserveOut <= 0n) return 0n;
+  if (amountIn <= BigInt(0) || reserveIn <= BigInt(0) || reserveOut <= BigInt(0)) return BigInt(0);
   const amountInWithFee = amountIn * FEE_NUM;
   const numerator = amountInWithFee * reserveOut;
   const denominator = reserveIn * FEE_DEN + amountInWithFee;
-  return denominator === 0n ? 0n : numerator / denominator;
+  return denominator === BigInt(0) ? BigInt(0) : numerator / denominator;
 }
 
 /* -------------------- Helpers -------------------- */
@@ -135,10 +135,10 @@ export default function SwapPage() {
   const fromBalance = useMemo(() => {
     if (!address) return 0;
     if (from.native) {
-      const v = nativeBal.data?.value ?? 0n;
+      const v = nativeBal.data?.value ?? BigInt(0);
       return Number(formatUnits(v, 18));
     }
-    const v = (fromErc20Raw as bigint | undefined) ?? 0n;
+    const v = (fromErc20Raw as bigint | undefined) ?? BigInt(0);
     return Number(formatUnits(v, from.decimals));
   }, [
     address,
@@ -169,8 +169,8 @@ export default function SwapPage() {
     try {
       const token0 = t0 ? getAddress(t0 as string) : null;
       const token1 = t1 ? getAddress(t1 as string) : null;
-      const r0 = reservesRaw ? ((reservesRaw as any)[0] as bigint) : 0n;
-      const r1 = reservesRaw ? ((reservesRaw as any)[1] as bigint) : 0n;
+      const r0 = reservesRaw ? ((reservesRaw as any)[0] as bigint) : BigInt(0);
+      const r1 = reservesRaw ? ((reservesRaw as any)[1] as bigint) : BigInt(0);
       const isWbnbAsset =
         token0 &&
         token1 &&
@@ -206,7 +206,7 @@ export default function SwapPage() {
         // WRAP/UNWRAP: 1:1 quote
         if (isWrap(from, to) || isUnwrap(from, to)) {
           const amt = parseUnits(amountUi, 18);
-          const min = (amt * BigInt(10_000 - slippageBps)) / 10_000n;
+          const min = (amt * BigInt(10_000 - slippageBps)) / BigInt(10_000);
           if (!cancel) {
             setRawOut(amt);
             setEstOut(formatUnits(amt, 18));
@@ -260,12 +260,12 @@ export default function SwapPage() {
         }
 
         const out = getAmountOut(amountIn, reserveIn, reserveOut);
-        if (out === 0n) {
+        if (out === BigInt(0)) {
           setRouteMsg("Insufficient liquidity or wrong fee assumption.");
           return;
         }
 
-        const min = (out * BigInt(10_000 - slippageBps)) / 10_000n;
+        const min = (out * BigInt(10_000 - slippageBps)) / BigInt(10_000);
         if (!cancel) {
           setRawOut(out);
           setEstOut(formatUnits(out, to.decimals));
@@ -360,8 +360,8 @@ export default function SwapPage() {
 
       // 2) Call pair.swap with correct side
       //    amount0Out/amount1Out depends on which side is output relative to token0/token1
-      let amount0Out = 0n,
-        amount1Out = 0n;
+      let amount0Out = BigInt(0),
+        amount1Out = BigInt(0);
 
       // Case: WBNB -> ASSET (or tBNB->WBNB->ASSET)
       if (
@@ -372,15 +372,15 @@ export default function SwapPage() {
         const reserveIn = isToken0Wbnb ? pair.r0 : pair.r1;
         const reserveOut = isToken0Wbnb ? pair.r1 : pair.r0;
         const out = getAmountOut(amountIn, reserveIn, reserveOut);
-        const min = (out * BigInt(10_000 - slippageBps)) / 10_000n;
+        const min = (out * BigInt(10_000 - slippageBps)) / BigInt(10_000);
         if (out < min) throw new Error("Slippage too high.");
         // output = ASSET
         if (isToken0Wbnb) {
-          amount0Out = 0n;
+          amount0Out = BigInt(0);
           amount1Out = out;
         } else {
           amount0Out = out;
-          amount1Out = 0n;
+          amount1Out = BigInt(0);
         }
       }
       // Case: ASSET -> WBNB
@@ -388,14 +388,14 @@ export default function SwapPage() {
         const reserveIn = isToken0Wbnb ? pair.r1 : pair.r0;
         const reserveOut = isToken0Wbnb ? pair.r0 : pair.r1;
         const out = getAmountOut(amountIn, reserveIn, reserveOut);
-        const min = (out * BigInt(10_000 - slippageBps)) / 10_000n;
+        const min = (out * BigInt(10_000 - slippageBps)) / BigInt(10_000);
         if (out < min) throw new Error("Slippage too high.");
         // output = WBNB
         if (isToken0Wbnb) {
           amount0Out = out;
-          amount1Out = 0n;
+          amount1Out = BigInt(0);
         } else {
-          amount0Out = 0n;
+          amount0Out = BigInt(0);
           amount1Out = out;
         }
       }
@@ -410,12 +410,12 @@ export default function SwapPage() {
 
       // 4) If we wanted tBNB, unwrap received WBNB
       if (willUnwrapAfter) {
-        const out = rawOut ?? 0n; // best-effort
+        const out = rawOut ?? BigInt(0); // best-effort
         await call({
           abi: wbnbAbi,
           address: WBNB,
           functionName: "withdraw",
-          args: [out > 0n ? out : 0n], // if we don't know exact, you can put amount1Out/amount0Out accordingly
+          args: [out > BigInt(0) ? out : BigInt(0)], // if we don't know exact, you can put amount1Out/amount0Out accordingly
         });
       }
     } catch (err: any) {
