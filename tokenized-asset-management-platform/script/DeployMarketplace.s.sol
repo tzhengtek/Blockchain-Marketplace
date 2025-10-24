@@ -10,10 +10,12 @@ contract DeployMarketplaceScript is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         address kycRegistryAddress = vm.envAddress("KYC_REGISTRY_ADDRESS");
+        address priceOracleAddress = vm.envAddress("PRICE_ORACLE_ADDRESS");
 
         console.log("=== Deploying AssetMarketplace ===");
         console.log("Deployer address:", deployer);
         console.log("KYC Registry:", kycRegistryAddress);
+        console.log("Price Oracle:", priceOracleAddress);
         console.log("Deployer balance:", deployer.balance / 10**18, "BNB");
 
         vm.startBroadcast(deployerPrivateKey);
@@ -21,6 +23,7 @@ contract DeployMarketplaceScript is Script {
         // Deploy AssetMarketplace
         AssetMarketplace marketplace = new AssetMarketplace(
             kycRegistryAddress,
+            priceOracleAddress,
             deployer
         );
 

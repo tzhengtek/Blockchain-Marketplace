@@ -5,9 +5,11 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./KYCRegistry.sol";
+import "./NFTPriceOracle.sol";
 
 contract AssetMarketplace is ReentrancyGuard, Ownable {
     KYCRegistry public kycRegistry;
+    NFTPriceOracle public priceOracle;
 
     struct Listing {
         address seller;
@@ -48,10 +50,17 @@ contract AssetMarketplace is ReentrancyGuard, Ownable {
 
     event MarketplaceFeeUpdated(uint256 newFee);
     event FeesWithdrawn(address indexed to, uint256 amount);
+    event PriceOracleUpdated(address indexed newOracle);
 
-    constructor(address kycRegistryAddress, address initialOwner) Ownable(initialOwner) {
+    constructor(
+        address kycRegistryAddress,
+        address priceOracleAddress,
+        address initialOwner
+    ) Ownable(initialOwner) {
         require(kycRegistryAddress != address(0), "AssetMarketplace: Invalid KYC registry");
+        require(priceOracleAddress != address(0), "AssetMarketplace: Invalid price oracle");
         kycRegistry = KYCRegistry(kycRegistryAddress);
+        priceOracle = NFTPriceOracle(priceOracleAddress);
     }
 
     modifier onlyKYCVerified() {
@@ -87,6 +96,37 @@ contract AssetMarketplace is ReentrancyGuard, Ownable {
         });
 
         emit Listed(nftContract, tokenId, msg.sender, price);
+    }
+
+    /**
+     * @notice List an NFT for sale at the oracle price
+     * @param nftContract The NFT contract address
+     * @param tokenId The token ID to list
+     */
+    function listNFTAtOraclePrice(
+        address nftContract,
+        uint256 tokenId
+    ) external onlyKYCVerified nonReentrant {
+        IERC721 nft = IERC721(nftContract);
+        require(nft.ownerOf(tokenId) == msg.sender, "AssetMarketplace: Not token owner");
+        require(
+            nft.getApproved(tokenId) == address(this) ||
+            nft.isApprovedForAll(msg.sender, address(this)),
+            "AssetMarketplace: Marketplace not approved"
+        );
+
+        // Get oracle price
+        (uint256 oraclePrice, uint256 timestamp, ) = priceOracle.getLatestPrice(nftContract, tokenId);
+        require(oraclePrice > 0, "AssetMarketplace: No oracle price available");
+        require(timestamp > 0, "AssetMarketplace: Oracle price not set");
+
+        listings[nftContract][tokenId] = Listing({
+            seller: msg.sender,
+            price: oraclePrice,
+            active: true
+        });
+
+        emit Listed(nftContract, tokenId, msg.sender, oraclePrice);
     }
 
     /**
@@ -179,6 +219,16 @@ contract AssetMarketplace is ReentrancyGuard, Ownable {
     }
 
     /**
+     * @notice Update Price Oracle address (owner only)
+     * @param newPriceOracle New price oracle address
+     */
+    function updatePriceOracle(address newPriceOracle) external onlyOwner {
+        require(newPriceOracle != address(0), "AssetMarketplace: Invalid price oracle");
+        priceOracle = NFTPriceOracle(newPriceOracle);
+        emit PriceOracleUpdated(newPriceOracle);
+    }
+
+    /**
      * @notice Get listing details
      * @param nftContract The NFT contract address
      * @param tokenId The token ID
@@ -201,5 +251,20 @@ contract AssetMarketplace is ReentrancyGuard, Ownable {
         uint256 tokenId
     ) external view returns (bool) {
         return listings[nftContract][tokenId].active;
+    }
+
+    /**
+     * @notice Get oracle price for an NFT
+     * @param nftContract The NFT contract address
+     * @param tokenId The token ID
+     * @return price Oracle price in wei
+     * @return timestamp When the price was last updated
+     * @return isIndividualPrice True if individual price, false if floor price
+     */
+    function getOraclePrice(
+        address nftContract,
+        uint256 tokenId
+    ) external view returns (uint256 price, uint256 timestamp, bool isIndividualPrice) {
+        return priceOracle.getLatestPrice(nftContract, tokenId);
     }
 }
