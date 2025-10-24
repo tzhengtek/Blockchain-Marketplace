@@ -28,7 +28,6 @@ pub struct BlockchainSettings {
 impl ContractSettings {
     pub fn identify_contract(&self, address: Address) -> Option<String> {
         match () {
-            _ if address == self.kyc_address => Some(self.kyc_address.to_string()),
             _ if address == self.nft_address => Some(self.nft_address.to_string()),
             _ if address == self.token_address => Some(self.token_address.to_string()),
             _ => None,

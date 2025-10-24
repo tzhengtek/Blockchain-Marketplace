@@ -64,6 +64,35 @@ impl DatabasePool {
         tracing::info!(": SUCCESS !");
         Ok(Self(provider))
     }
+
+    pub async fn add_nft(
+        &self,
+        owner: String,
+        token_id: u64,
+        contract_address: &String,
+    ) -> Result<(), sqlx::Error> {
+        tracing::info!("Adding NFT...");
+        sqlx::query("INSERT INTO nft (owner, token_id, contract_address) VALUES ($1, $2, $3)")
+            .bind(&owner)
+            .bind(i64::try_from(token_id).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?)
+            .bind(&contract_address)
+            .fetch_optional(&self.0)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn add_kyc(&self, wallet_account: String) -> Result<(), sqlx::Error> {
+        tracing::info!("Adding KYC in database...");
+        sqlx::query(
+            "INSERT INTO \"user\" (address, iskycverified) VALUES ($1, $2) ON CONFLICT (address) DO NOTHING",
+        ).bind(&wallet_account).bind(true).fetch_optional(&self.0).await?;
+        Ok(())
+    }
+
     pub async fn add_block(&self, block_number: u64) -> Result<i32, sqlx::Error> {
         tracing::info!("Adding block number...");
         let row = sqlx::query(INSERT_INTO_BLOCK)
