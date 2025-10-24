@@ -278,12 +278,6 @@ blockchain/
 │   └── src/
 │       └── database.rs      # Query functions, models
 │
-├── frontend/                 # Next.js application (alternative)
-│   └── src/
-│       ├── app/             # Pages & layouts
-│       ├── components/      # React components
-│       └── utils/wagmi/     # Blockchain config
-│
 ├── nextjs/                   # Next.js application (main)
 │   └── src/
 │       ├── app/             # App router pages
@@ -369,11 +363,7 @@ cargo build -p indexer --release
 ```bash
 # For main Next.js app
 cd nextjs
-npm install
-
-# Or if using frontend/ directory
-cd frontend
-npm install
+pnpm install
 ```
 
 ### 6. Smart Contracts (Optional - Already Deployed)
@@ -387,7 +377,7 @@ cd tokenized-asset-management-platform
 forge install
 
 # Run tests
-forge test
+forge testc
 
 # Deploy (see DEPLOYMENT_BSC.md for details)
 forge script script/Deploy.s.sol --rpc-url bsc-testnet --broadcast
@@ -409,7 +399,7 @@ forge script script/Deploy.s.sol --rpc-url bsc-testnet --broadcast
 2. **Import to Vercel**
    - Go to [vercel.com/new](https://vercel.com/new)
    - Select your repository
-   - Set **Root Directory** to `nextjs` or `frontend`
+   - Set **Root Directory** to `nextjs`
    - Add environment variables:
      ```
      NEXT_PUBLIC_BACKEND_API=https://your-ngrok-url.ngrok-free.app/api
