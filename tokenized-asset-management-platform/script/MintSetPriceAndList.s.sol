@@ -18,7 +18,7 @@ import {AssetMarketplace} from "../src/AssetMarketplace.sol";
  * - ASSET_NFT_ADDRESS: Address of the AssetNFT contract
  * - PRICE_ORACLE_ADDRESS: Address of the NFTPriceOracle contract
  * - MARKETPLACE_ADDRESS: Address of the AssetMarketplace contract
- * - MINT_COUNT: Number of NFTs to mint (default: 10)
+ * - MINT_COUNT: Number of NFTs to mint (default: 5)
  * - PRICE_PER_NFT: Price per NFT in BNB (default: 0.01)
  * - ASSET_TYPE: Type of asset (default: "Real Estate")
  * - ASSET_VALUE: Value per asset in USD (default: 100000)
@@ -31,7 +31,8 @@ import {AssetMarketplace} from "../src/AssetMarketplace.sol";
  *   -vvvv
  *
  * Example with custom parameters:
- * MINT_COUNT=50 PRICE_PER_NFT=0.05 ASSET_TYPE="Commercial Property" \
+ * MINT_COUNT=10 PRICE_PER_NFT=0.05 ASSET_TYPE="Commercial Property" \
+ * BASE_URI="ipfs://your-actual-cid/" \
  * forge script script/MintSetPriceAndList.s.sol:MintSetPriceAndListScript \
  *   --rpc-url $BSC_TESTNET_RPC_URL \
  *   --broadcast \
@@ -48,7 +49,7 @@ contract MintSetPriceAndListScript is Script {
         address marketplaceAddress = vm.envAddress("MARKETPLACE_ADDRESS");
 
         // Optional parameters with defaults
-        uint256 mintCount = vm.envOr("MINT_COUNT", uint256(10));
+        uint256 mintCount = vm.envOr("MINT_COUNT", uint256(5));
         uint256 pricePerNFTEther = vm.envOr("PRICE_PER_NFT", uint256(1)); // Default 0.01 BNB (stored as 1 to avoid decimals)
         uint256 pricePerNFT = pricePerNFTEther * 10**16; // Convert to wei (0.01 BNB)
         string memory assetType = vm.envOr("ASSET_TYPE", string("Real Estate"));
