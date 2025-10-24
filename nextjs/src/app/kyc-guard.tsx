@@ -17,7 +17,7 @@ export function KYCGuard({ children }: { children: React.ReactNode }) {
     // If you don’t have an address yet, keep user on home/kyc.
     const isPublic = PUBLIC_PATHS.includes(pathname);
 
-    const { data, isLoading, isError } = useKYC(address ?? "");
+    const { data, isLoading, isError } = useKYC(address || "");
 
     useEffect(() => {
         if (!address) {
