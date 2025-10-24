@@ -15,16 +15,16 @@ use utoipa::ToSchema;
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
 pub struct NFTEvent {
     pub owner: String,
-    pub token_id: i32,
+    pub token_id: i64,
     pub contract_address: String,
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
 pub struct ListedNFT {
     pub seller: String,
-    pub token_id: i32,
+    pub token_id: i64,
     pub nft_address: String,
-    pub price: i32,
+    pub price: i64,
 }
 
 #[serde_with::serde_as]
