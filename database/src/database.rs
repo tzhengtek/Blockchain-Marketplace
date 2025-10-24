@@ -23,7 +23,7 @@ pub struct NFTEvent {
 pub struct ListedNFT {
     pub seller: String,
     pub token_id: i64,
-    pub nft_address: String,
+    pub nft_contract: String,
     pub price: i64,
 }
 
