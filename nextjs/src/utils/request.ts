@@ -1,12 +1,14 @@
 import axios from "axios";
 
-const apiUrl = process.env.URL_API;
-
-export async function getTransactions() {
-  console.log("API URL:", apiUrl);
-  const response = await axios.get(`http://localhost:3000/api/transaction`);
+export async function getTransactions(pagination: { page: number }) {
+  const response = await axios.get(`http://localhost:3000/api/transaction`, {
+    params: {
+      pagination: pagination.page,
+    },
+  });
+  console.log("getTransactions response:", response);
   if (response.status !== 200) {
-    throw new Error(`Erreur HTTP: ${response.status}`);
+    throw new Error(`HTTP Error: ${response.status}`);
   }
   return response.data;
 }
