@@ -276,7 +276,7 @@ async fn remove_wallet_kyc(
     get,
     path = "/api/transaction",
     params(
-        ("transaction_address" = Option<String>, Query, description = "Transaction address to query transactions"),
+        ("transaction_hash" = Option<String>, Query, description = "Transaction address to query transactions"),
         ("contract_address" = Option<String>, Query, description = "Wallet address to query contract"),
         ("limit" = Option<u32>, Query, description = "Optional limit for number of results"),
         ("pagination" = Option<u32>, Query, description = "Optional pagination for chunk of limited number of results"),

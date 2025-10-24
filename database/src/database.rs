@@ -229,6 +229,10 @@ impl DatabasePool {
         &self,
         transaction_params: &TransactionParams,
     ) -> Result<(u64, Vec<TransactionEvent>), sqlx::Error> {
+        tracing::info!(transaction_params.contract_address);
+        tracing::info!(transaction_params.transaction_hash);
+        tracing::info!(transaction_params.from);
+        tracing::info!(transaction_params.to);
         let filter_contract = match &transaction_params.contract_address {
             Some(address) => format!("AND contract_address='{}'", address),
             None => "".to_string(),
@@ -238,16 +242,17 @@ impl DatabasePool {
             None => "".to_string(),
         };
         let filter_from = match &transaction_params.from {
-            Some(address) => format!("AND from='{}'", address),
+            Some(address) => format!("AND from_address='{}'", address),
             None => "".to_string(),
         };
         let filter_to = match &transaction_params.to {
-            Some(address) => format!("AND to='{}'", address),
+            Some(address) => format!("AND to_address='{}'", address),
             None => "".to_string(),
         };
         let get_transaction_request = format!(
             "SELECT * FROM token WHERE 1=1 {filter_contract} {filter_from} {filter_to} {filter_transaction} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
         );
+        tracing::info!(get_transaction_request);
         tracing::info!("Fetching transaction from database...");
         let results = query_as::<_, TransactionEvent>(&get_transaction_request)
             .bind(transaction_params.limit)
