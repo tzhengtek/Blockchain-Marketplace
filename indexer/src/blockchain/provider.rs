@@ -17,6 +17,17 @@ use alloy_primitives::Uint;
 
 use std::str::FromStr;
 
+use futures_util::StreamExt;
+
+use crate::config::{ContractSettings, Settings};
+use anyhow::{Error, Result};
+use database::{DatabasePool, TransactionEvent};
+
+use alloy::network::EthereumWallet;
+use alloy::signers::local::PrivateKeySigner;
+
+use alloy_primitives::Address;
+
 sol! {
     #[allow(missing_docs)]
     #[sol(rpc)]
@@ -52,19 +63,6 @@ sol! {
     "examples/abi/MARKET.json",
 }
 
-use colored::Colorize;
-
-use futures_util::StreamExt;
-
-use crate::config::{ContractSettings, Settings};
-use anyhow::{Error, Result};
-use database::{DatabasePool, TransactionEvent};
-
-use alloy::network::EthereumWallet;
-use alloy::signers::local::PrivateKeySigner;
-
-use alloy_primitives::Address;
-
 #[derive(Clone)]
 pub struct BlockchainIndexer {
     provider: FillProvider<
@@ -78,21 +76,6 @@ pub struct BlockchainIndexer {
         RootProvider,
     >,
     kyc_contract: KYC::KYCInstance<
-        FillProvider<
-            JoinFill<
-                JoinFill<
-                    Identity,
-                    JoinFill<
-                        GasFiller,
-                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                    >,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            RootProvider,
-        >,
-    >,
-    nft_contract: NFT::NFTInstance<
         FillProvider<
             JoinFill<
                 JoinFill<
@@ -152,30 +135,26 @@ impl BlockchainIndexer {
             .wallet(wallet)
             .connect_ws(ws)
             .await?;
-        tracing::info!("GETTING BALANCE");
         let balance = provider.get_balance(signer.address()).await?;
 
-        tracing::info!("CHECKING BALANCE : {}", balance);
+        tracing::info!("Getting wallet balance : {}", balance);
 
         let kyc_contract = KYC::new(settings.contract.kyc_address, provider.clone());
-        let nft_contract = NFT::new(settings.contract.nft_address, provider.clone());
         let oracle_contract = ORACLE::new(settings.contract.oracle_address, provider.clone());
         let market_contract = MARKET::new(settings.contract.market_address, provider.clone());
-        tracing::info!(": SUCCESS !");
         Ok(Self {
-            provider: provider,
-            kyc_contract: kyc_contract,
-            nft_contract: nft_contract,
-            oracle_contract: oracle_contract,
-            market_contract: market_contract,
+            provider,
+            kyc_contract,
+            oracle_contract,
+            market_contract,
             nft_address: settings.contract.nft_address,
             token_address: settings.contract.token_address,
         })
     }
 
-    pub async fn check_kyc(&self, user_address: &String) -> Result<bool> {
+    pub async fn check_kyc(&self, user_address: &str) -> Result<bool> {
         tracing::info!("Checking the address KYC...");
-        let user_address = Address::from_str(&user_address)
+        let user_address = Address::from_str(user_address)
             .map_err(|_| Error::msg("Error while converting address"))?;
 
         let val = self.kyc_contract.isKYCVerified(user_address).call().await?;
@@ -213,8 +192,9 @@ impl BlockchainIndexer {
         Ok(())
     }
 
-    pub async fn add_kyc(&self, user_address: &String) -> Result<()> {
-        let user_address = Address::from_str(&user_address)
+    pub async fn add_kyc(&self, user_address: &str) -> Result<()> {
+        tracing::info!("Adding user address in KYC...");
+        let user_address = Address::from_str(user_address)
             .map_err(|_| Error::msg("Error while converting address"))?;
 
         let tx = self
@@ -235,11 +215,11 @@ impl BlockchainIndexer {
         Ok(())
     }
 
-    pub async fn remove_kyc(&self, user_address: &String) -> Result<()> {
-        let user_address = Address::from_str(&user_address)
+    pub async fn remove_kyc(&self, user_address: &str) -> Result<()> {
+        let user_address = Address::from_str(user_address)
             .map_err(|_| Error::msg("Error while converting address"))?;
 
-        tracing::info!("Revoking KYC");
+        tracing::info!("Revoking user wallet from KYC...");
         let tx = self
             .kyc_contract
             .revokeKYC(user_address)
@@ -276,23 +256,33 @@ impl BlockchainIndexer {
 
         tracing::info!("Subscribing to contract logs...",);
         let sub = self.provider.subscribe_logs(&filter).await?;
-        tracing::info!(": SUCCESS !");
         let mut stream = sub.into_stream();
 
         while let Some(log) = stream.next().await {
             match log.topic0() {
+                Some(&MARKET::ListingCancelled::SIGNATURE_HASH) => {
+                    let MARKET::ListingCancelled {
+                        nftContract,
+                        seller: _,
+                        tokenId: _,
+                    } = log.log_decode()?.inner.data;
+
+                    tracing::info!("Unlisting NFT from marketplace...");
+                    let nft_contract = nftContract.to_string();
+                    pool.removing_nft(nft_contract).await?;
+                }
                 Some(&MARKET::Sold::SIGNATURE_HASH) => {
                     let MARKET::Sold {
                         nftContract,
-                        seller,
-                        buyer,
-                        tokenId,
-                        price,
+                        seller: _,
+                        buyer: _,
+                        tokenId: _,
+                        price: _,
                     } = log.log_decode()?.inner.data;
 
                     tracing::info!("Solding NFT from marketplace...");
                     let nft_contract = nftContract.to_string();
-                    pool.solding_nft(nft_contract).await?;
+                    pool.removing_nft(nft_contract).await?;
                 }
                 Some(&MARKET::Listed::SIGNATURE_HASH) => {
                     let MARKET::Listed {
@@ -313,41 +303,28 @@ impl BlockchainIndexer {
                     pool.listing_nft(nft_contract, token_id, seller, price)
                         .await?;
                 }
-                Some(&NFT::Transfer::SIGNATURE_HASH | &BEP20::Transfer::SIGNATURE_HASH) => {
+                Some(&NFT::Transfer::SIGNATURE_HASH) => {
                     let addr = log.address();
 
                     if addr == self.nft_address {
-                        let NFT::Transfer { from, to, tokenId } = log.log_decode()?.inner.data;
+                        let NFT::Transfer {
+                            from: _,
+                            to,
+                            tokenId,
+                        } = log.log_decode()?.inner.data;
                         tracing::info!("Transfer NFT...");
                         let token_id = u64::try_from(tokenId)
                             .map_err(|_| Error::msg("Token ID doesn't fit"))?;
                         pool.add_nft(to.to_string(), token_id, &self.nft_address.to_string())
                             .await?;
                     } else if addr == self.token_address {
-                        tracing::info!(
-                            "Hash :\t{}",
-                            log.transaction_hash
-                                .ok_or(Error::msg("Not existing transaction hash"))?
-                                .to_string()
-                                .bold()
-                        );
+                        tracing::info!("Transfer NFT...");
                         let BEP20::Transfer {
                             from, to, value, ..
                         } = log.log_decode()?.inner.data;
-                        tracing::debug!("{}", format!("From :\t{}", from).bold());
-                        tracing::debug!("{}", format!("To :\t{}", to).bold());
-                        tracing::debug!("{}", format!("Value :\t{}", value).bold());
-                        tracing::debug!(
-                            "Block Number : {}",
-                            log.block_number
-                                .ok_or(Error::msg("Not existing block number"))?
-                                .to_string()
-                                .bold()
-                        );
                         let block_number: u64 = log
                             .block_number
                             .ok_or_else(|| Error::msg("Block number is missing"))?;
-                        tracing::debug!("BLOCK : {}", block_number);
                         let block_id = pool.add_block(block_number).await?;
                         let transaction = TransactionEvent {
                             transaction_hash: log
@@ -357,7 +334,7 @@ impl BlockchainIndexer {
                             from_address: from.to_string(),
                             to_address: to.to_string(),
                             value: value.to_string(),
-                            block_id: block_id,
+                            block_id,
                             contract_address: self.token_address.to_string(),
                             timestamp: None,
                         };
@@ -366,19 +343,12 @@ impl BlockchainIndexer {
                 }
                 Some(&KYC::KYCAdded::SIGNATURE_HASH) => {
                     let KYC::KYCAdded { account } = log.log_decode()?.inner.data;
-                    tracing::info!("Add new KYC...");
+                    tracing::info!("Added new KYC...");
                     pool.add_kyc(account.to_string()).await?;
                 }
 
                 _ => {
-                    tracing::info!("Not a Transfer Event !");
-                    tracing::debug!(
-                        "Block Number : {}",
-                        log.block_number
-                            .ok_or(Error::msg("Not existing block number"))?
-                            .to_string()
-                            .bold()
-                    );
+                    tracing::info!("Not a catchable Event !");
                 }
             }
         }

@@ -11,6 +11,7 @@ pub struct Settings {
     pub contract: ContractSettings,
     pub database_url: String,
     pub wallet_private_key: String,
+    pub _port: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -25,16 +26,6 @@ pub struct ContractSettings {
 #[derive(Debug, Deserialize)]
 pub struct BlockchainSettings {
     pub ws_url: String,
-}
-
-impl ContractSettings {
-    pub fn identify_contract(&self, address: Address) -> Option<String> {
-        match () {
-            _ if address == self.nft_address => Some(self.nft_address.to_string()),
-            _ if address == self.token_address => Some(self.token_address.to_string()),
-            _ => None,
-        }
-    }
 }
 
 impl Settings {

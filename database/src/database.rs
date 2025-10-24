@@ -95,18 +95,20 @@ impl DatabasePool {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
         tracing::info!("Connection to the database...");
         let provider: PgPool = PgPool::connect(database_url).await?;
-        tracing::info!(": SUCCESS !");
+        tracing::info!("Connected to the database...");
         Ok(Self(provider))
     }
 
     pub async fn get_listing_nft(&self) -> Result<Vec<ListedNFT>, sqlx::Error> {
+        tracing::info!("Getting all listing nft in marketplace...");
         let res = sqlx::query_as::<_, ListedNFT>("SELECT * FROM marketplace")
             .fetch_all(&self.0)
             .await?;
         Ok(res)
     }
 
-    pub async fn solding_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
+    pub async fn removing_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
+        tracing::info!("Removing (solded) nft from marketplace...");
         sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1")
             .bind(&nft_contract)
             .fetch_optional(&self.0)
@@ -121,7 +123,7 @@ impl DatabasePool {
         seller: String,
         price: u64,
     ) -> Result<(), sqlx::Error> {
-        tracing::info!("Listing NFT...");
+        tracing::info!("Listing NFT in marketplace...");
         sqlx::query("INSERT INTO marketplace (nft_contract, seller, token_id, price) VALUES ($1, $2, $3, $4)")
         .bind(&nft_contract).bind(&seller).bind(i64::try_from(token_id).map_err(|e| {
                 sqlx::Error::InvalidArgument(
@@ -141,7 +143,7 @@ impl DatabasePool {
         token_id: u64,
         contract_address: &String,
     ) -> Result<(), sqlx::Error> {
-        tracing::info!("Adding NFT...");
+        tracing::info!("Adding NFT to the database...");
         sqlx::query("INSERT INTO nft (owner, token_id, contract_address) VALUES ($1, $2, $3)")
             .bind(&owner)
             .bind(i64::try_from(token_id).map_err(|e| {
@@ -149,14 +151,14 @@ impl DatabasePool {
                     format!("Error while converting to i64 {e:?}").to_string(),
                 )
             })?)
-            .bind(&contract_address)
+            .bind(contract_address)
             .fetch_optional(&self.0)
             .await?;
         Ok(())
     }
 
     pub async fn add_kyc(&self, wallet_account: String) -> Result<(), sqlx::Error> {
-        tracing::info!("Adding KYC in database...");
+        tracing::info!("Authorizing user wallet in database...");
         sqlx::query(
             "INSERT INTO \"user\" (address, iskycverified) VALUES ($1, $2) ON CONFLICT (address) DO NOTHING",
         ).bind(&wallet_account).bind(true).fetch_optional(&self.0).await?;
@@ -177,9 +179,8 @@ impl DatabasePool {
     }
 
     pub async fn add_transaction(&self, transaction: TransactionEvent) -> Result<(), sqlx::Error> {
-        tracing::info!("Adding transaction...");
-        let insert_transaction_into = format!(
-            "INSERT INTO token (
+        tracing::info!("Adding token in database...");
+        let insert_transaction_into = "INSERT INTO token (
                     transaction_hash, 
                     from_address, 
                     to_address, 
@@ -187,8 +188,9 @@ impl DatabasePool {
                     block_id,
                     contract_address
                 ) VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (transaction_hash) DO NOTHING",
-        );
+                ON CONFLICT (transaction_hash) DO NOTHING"
+            .to_string();
+
         query_as::<_, TransactionEvent>(&insert_transaction_into)
             .bind(&transaction.transaction_hash)
             .bind(&transaction.from_address)
@@ -198,7 +200,6 @@ impl DatabasePool {
             .bind(&transaction.contract_address)
             .fetch_optional(&self.0)
             .await?;
-        tracing::info!(": SUCCESS !");
         Ok(())
     }
 
@@ -206,6 +207,7 @@ impl DatabasePool {
         &self,
         nft_params: &NFTParams,
     ) -> Result<(u64, Vec<NFTEvent>), sqlx::Error> {
+        tracing::info!("Get NFT from database...");
         let filter_owner = match &nft_params.owner {
             Some(owner) => format!("AND owner='{}'", owner),
             None => "".to_string(),
@@ -218,7 +220,7 @@ impl DatabasePool {
             .bind(cmp::max(nft_params.pagination - 1, 0) * nft_params.limit)
             .fetch_all(&self.0)
             .await?;
-
+        tracing::info!(get_nft_request);
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM nft")
             .fetch_one(&self.0)
             .await?;
@@ -229,10 +231,8 @@ impl DatabasePool {
         &self,
         transaction_params: &TransactionParams,
     ) -> Result<(u64, Vec<TransactionEvent>), sqlx::Error> {
-        tracing::info!(transaction_params.contract_address);
-        tracing::info!(transaction_params.transaction_hash);
-        tracing::info!(transaction_params.from);
-        tracing::info!(transaction_params.contract_address);
+        tracing::info!("Getting tokens from database...");
+
         let filter_contract = match &transaction_params.contract_address {
             Some(address) => format!("AND contract_address='{}'", address),
             None => "".to_string(),
@@ -253,7 +253,6 @@ impl DatabasePool {
             "SELECT * FROM token WHERE 1=1 {filter_contract} {filter_from} {filter_to} {filter_transaction} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
         );
         tracing::info!(get_transaction_request);
-        tracing::info!("Fetching transaction from database...");
         let results = query_as::<_, TransactionEvent>(&get_transaction_request)
             .bind(transaction_params.limit)
             .bind(cmp::max(transaction_params.pagination - 1, 0) * transaction_params.limit)

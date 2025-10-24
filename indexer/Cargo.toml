@@ -12,7 +12,6 @@ name = "indexer"
 path = "src/main.rs"
 
 [dependencies]
-colored = "3.0.0"
 config = { version = "0.15.18", features = ["toml"] }
 dotenv = "0.15.0"
 eyre = "0.6.12"

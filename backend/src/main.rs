@@ -1,4 +1,3 @@
-use std::env;
 use std::sync::Arc;
 
 use axum::Json;
@@ -19,7 +18,7 @@ use tower_http::cors::{Any, CorsLayer};
 use anyhow::{Error, Result};
 use database::{DatabasePool, ListedNFT, NFTEvent, NFTParams, TransactionParams};
 use dotenv::dotenv;
-use indexer::{BlockchainIndexer, Settings};
+use indexer::{Settings, blockchain::provider::BlockchainIndexer};
 
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -40,13 +39,12 @@ async fn main() -> Result<()> {
         .init();
     dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL").map_err(Error::msg)?;
-    let settings = Settings::load().map_err(|e| Error::msg(e))?;
+    let settings = Settings::load().map_err(Error::msg)?;
 
-    println!("{:?}", settings);
+    tracing::debug!("{:?}", settings);
 
     let indexer = BlockchainIndexer::new(&settings).await?;
-    let pool = DatabasePool::new(&database_url).await?;
+    let pool = DatabasePool::new(&settings.database_url).await?;
 
     let shared_state = Arc::new(AppState(pool, indexer));
 
@@ -57,8 +55,9 @@ async fn main() -> Result<()> {
         .nest("/api", app_routes);
     tracing::info!("Routes Initialized !");
 
-    tracing::info!("Server listening on http://localhost:3000");
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let server_host = format!("Server listening on http://localhost:{}", settings._port);
+    tracing::info!(server_host);
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings._port)).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -152,7 +151,7 @@ pub struct UpdateNFTRequest {
     get,
     path = "/api/nft-listed",
     responses(
-        (status = 200, description = "KYC status", body = bool)
+        (status = 200, description = "Listing all NFT in marketplace", body = bool)
     )
 )]
 async fn get_listed_nft(
@@ -177,8 +176,8 @@ async fn get_listed_nft(
         ("pagination" = Option<u32>, Query, description = "Optional pagination for chunk of limited number of results"),
     ),
     responses(
-        (status = 200, description = "Nfts retrieved", body = [NFTListReponse]),
-        (status = 502, description = "Error fetching transactions")
+        (status = 200, description = "NFTs retrieved", body = [NFTListReponse]),
+        (status = 502, description = "Error fetching NFT")
     )
 )]
 async fn get_nft(
@@ -187,10 +186,7 @@ async fn get_nft(
 ) -> Result<Json<NFTListReponse>, (StatusCode, String)> {
     tracing::info!("Getting Transaction...");
     match state.0.get_nft(&payload).await {
-        Ok((count, nfts)) => Ok(Json(NFTListReponse {
-            total: count,
-            nfts: nfts,
-        })),
+        Ok((count, nfts)) => Ok(Json(NFTListReponse { total: count, nfts })),
         Err(e) => Err((
             StatusCode::BAD_GATEWAY,
             format!("Error while retrieving transaction {e:?}"),
@@ -210,7 +206,7 @@ async fn update_nft(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateNFTRequest>,
 ) -> Result<StatusCode, AppError> {
-    let _ = state
+    state
         .1
         .update_nft_price(payload.contract_address, payload.token_id, payload.price)
         .await?;
@@ -221,7 +217,7 @@ async fn update_nft(
     get,
     path = "/api/kyc",
     params(
-        ("wallet_address" = String, Query, description = "Wallet to check KYC")
+        ("wallet_address" = String, Query, description = "Check if wallet is in KYC")
     ),
     responses(
         (status = 200, description = "KYC status", body = bool)
@@ -248,7 +244,7 @@ async fn add_wallet_kyc(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<KYCRequest>,
 ) -> Result<StatusCode, AppError> {
-    let _ = state.1.add_kyc(&payload.wallet_address).await?;
+    state.1.add_kyc(&payload.wallet_address).await?;
     tracing::info!("{:?}", payload.wallet_address);
     Ok(StatusCode::CREATED)
 }
@@ -267,7 +263,7 @@ async fn remove_wallet_kyc(
     Query(payload): Query<KYCRequest>,
     State(state): State<Arc<AppState>>,
 ) -> Result<StatusCode, AppError> {
-    let _ = state.1.remove_kyc(&payload.wallet_address).await?;
+    state.1.remove_kyc(&payload.wallet_address).await?;
     tracing::info!("Remove {:?} from KYC", payload.wallet_address);
     Ok(StatusCode::NO_CONTENT)
 }
@@ -296,7 +292,7 @@ async fn get_transaction(
     match state.0.get_transaction(&params).await {
         Ok((count, transactions)) => Ok(Json(TransactionListReponse {
             total: count,
-            transactions: transactions,
+            transactions,
         })),
         Err(e) => Err((
             StatusCode::BAD_GATEWAY,
