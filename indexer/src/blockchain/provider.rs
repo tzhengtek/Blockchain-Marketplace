@@ -247,25 +247,29 @@ impl BlockchainIndexer {
                     let MARKET::ListingCancelled {
                         nftContract,
                         seller: _,
-                        tokenId: _,
+                        tokenId,
                     } = log.log_decode()?.inner.data;
+                    let token_id =
+                        u64::try_from(tokenId).map_err(|_| Error::msg("Price doesn't fit"))?;
 
                     tracing::info!("Unlisting NFT from marketplace...");
                     let nft_contract = nftContract.to_string();
-                    pool.removing_nft(nft_contract).await?;
+                    pool.removing_nft(nft_contract, token_id).await?;
                 }
                 Some(&MARKET::Sold::SIGNATURE_HASH) => {
                     let MARKET::Sold {
                         nftContract,
                         seller: _,
                         buyer: _,
-                        tokenId: _,
+                        tokenId,
                         price: _,
                     } = log.log_decode()?.inner.data;
+                    let token_id =
+                        u64::try_from(tokenId).map_err(|_| Error::msg("Price doesn't fit"))?;
 
                     tracing::info!("Solding NFT from marketplace...");
                     let nft_contract = nftContract.to_string();
-                    pool.removing_nft(nft_contract).await?;
+                    pool.removing_nft(nft_contract, token_id).await?;
                 }
                 Some(&MARKET::Listed::SIGNATURE_HASH) => {
                     let MARKET::Listed {

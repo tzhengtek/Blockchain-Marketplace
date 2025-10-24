@@ -107,10 +107,15 @@ impl DatabasePool {
         Ok(res)
     }
 
-    pub async fn removing_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
+    pub async fn removing_nft(
+        &self,
+        nft_contract: String,
+        token_id: u64,
+    ) -> Result<(), sqlx::Error> {
         tracing::info!("Removing (solded) nft from marketplace...");
-        sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1")
+        sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1 AND token_id=$2")
             .bind(&nft_contract)
+            .bind(token_id)
             .fetch_optional(&self.0)
             .await?;
         Ok(())
