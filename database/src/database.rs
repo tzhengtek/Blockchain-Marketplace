@@ -232,7 +232,7 @@ impl DatabasePool {
         tracing::info!(transaction_params.contract_address);
         tracing::info!(transaction_params.transaction_hash);
         tracing::info!(transaction_params.from);
-        tracing::info!(transaction_params.to);
+        tracing::info!(transaction_params.contract_address);
         let filter_contract = match &transaction_params.contract_address {
             Some(address) => format!("AND contract_address='{}'", address),
             None => "".to_string(),
@@ -259,10 +259,7 @@ impl DatabasePool {
             .bind(cmp::max(transaction_params.pagination - 1, 0) * transaction_params.limit)
             .fetch_all(&self.0)
             .await?;
-        let get_transaction_request_count = format!(
-            "SELECT COUNT(*) FROM token WHERE 1=1 {filter_contract} {filter_from} {filter_to} {filter_transaction} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
-        );
-        let count: i64 = sqlx::query_scalar(&get_transaction_request_count)
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM token")
             .fetch_one(&self.0)
             .await?;
         Ok((count as u64, results))
