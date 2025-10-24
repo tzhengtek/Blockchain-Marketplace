@@ -6,7 +6,7 @@ use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use database::TransactionEvent;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::filter::EnvFilter;
@@ -115,6 +115,7 @@ fn api_router(shared_state: Arc<AppState>) -> Router {
                 .delete(remove_wallet_kyc),
         )
         .route("/transaction", get(get_transaction))
+        .route("/nft", post(update_nft))
         .with_state(shared_state)
         .layer(cors)
 }
@@ -123,6 +124,32 @@ fn api_router(shared_state: Arc<AppState>) -> Router {
 pub struct TransactionListReponse {
     total: u64,
     transactions: Vec<TransactionEvent>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct UpdateNFTRequest {
+    contract_address: String,
+    token_id: u64,
+    price: u64,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/nft",
+    request_body = UpdateNFTRequest,
+    responses(
+        (status = 204, description = "Updated NFT price")
+    )
+)]
+async fn update_nft(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UpdateNFTRequest>,
+) -> Result<StatusCode, AppError> {
+    let _ = state
+        .1
+        .update_nft_price(payload.contract_address, payload.token_id, payload.price)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(
