@@ -2,25 +2,13 @@
 
 import React, { JSX, useEffect, useMemo, useState } from "react";
 import "./nft.css";
+import { getNft } from "@/utils/request";
 
 type Nft = {
   owner: string;
-  token_id: string | number;
+  token_id: string | undefined;
   contract_address: string;
 };
-
-const data = [
-  {
-    owner: "0x561ff221845884b970f2fa436c07313a0df8f3281a1c4264a0330bbed0537217",
-    token_id: "1",
-    contract_address: "0x58b704065B7aFF3ED351052f8560019E05925023",
-  },
-  {
-    owner: "0xc418026d3a161ee8927dd686d6f8b6533bec2c76eec3295b266aea25b0742c5c",
-    token_id: "2",
-    contract_address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  },
-];
 
 const PAGE_SIZE = 50;
 function copyToClipboard(text: string) {
@@ -37,21 +25,41 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 export default function Nft(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const [nfts, setNfts] = useState<Nft[]>([]);
+  const [owner, setOwner] = useState<string>("");
   const [total, setTotal] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
+  const [isSearch, setIsSearch] = useState(false);
 
   useEffect(() => {
-    // Fetch NFT data if needed
-  }, []);
+    (async () => {
+      try {
+        const res = await getNft({
+          owner: owner,
+          page: page,
+        });
+        setTotal(res.total ?? 0);
+        if (res.nfts) {
+          setNfts(res.nfts ?? []);
+        } else {
+          setNfts([]);
+        }
+      } catch (e: any) {
+        setNfts([]);
+      } finally {
+        setLoading(false);
+        setIsSearch(false);
+      }
+    })();
+  }, [page, isSearch]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(total / PAGE_SIZE));
   }, [total]);
 
-  // if (loading) return <div className="hint">Loading...</div>;
-  // if (error) return <div className="error">Error: {error}</div>;
+  if (loading) return <div className="hint">Loading...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
@@ -69,21 +77,34 @@ export default function Nft(): JSX.Element {
         </button>
         <h1 className="text-2xl font-semibold text-white">NFT ownerships</h1>
       </div>
-      <div className="search_bar">
+      <div className="input_section">
         <input
+          className="input_container"
           type="text"
-          placeholder="Search address ..."
-          value={search}
-          onKeyDown={handleKeyDown}
-          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Owner address ..."
+          value={owner}
+          onChange={(e) => setOwner(e.target.value)}
         />
+        <div className="relative flex items-center justify-center mb-8">
+          <button
+            onClick={() => {
+              setIsSearch(true);
+            }}
+            className="absolute left-0 text-white px-4 py-2 rounded-md cursor-pointer
+             bg-[#2f3b8f] transition-all duration-300
+             hover:-translate-y-1 hover:shadow-lg
+             active:translate-y-1 active:shadow-md"
+          >
+            Search
+          </button>
+        </div>
       </div>
       <div className="section_header">
         <div>Owner</div>
         <div>Token ID</div>
         <div>Address</div>
       </div>
-      {data.map((t) => (
+      {nfts.map((t) => (
         <div key={`${t.token_id}`} className="data_container">
           <div
             title={t.owner}

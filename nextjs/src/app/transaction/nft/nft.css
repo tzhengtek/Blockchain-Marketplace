@@ -13,34 +13,6 @@
   column-gap: 22px;
 }
 
-.search_bar {
-  margin-bottom: 2rem;
-  background-color: rgb(42, 42, 42);
-  border-radius: 8px;
-  width: 500px;
-  height: 40px;
-}
-
-.search_bar input {
-  width: 100%;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  background: transparent;
-  color: #ffffff;
-  font-size: 1rem;
-}
-
-.search_bar input::placeholder {
-  color: #b0b0b0;
-  opacity: 1;
-  padding-left: 4px;
-}
-
-.search_bar input:focus {
-  outline: none;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-}
 .pagination {
   display: flex;
   gap: 0.4rem;
@@ -86,4 +58,34 @@
 .address_info:hover {
   cursor: pointer;
   color: rgb(123, 123, 255);
+}
+
+.input_section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.input_container {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  color: #ffffff;
+  margin-bottom: 2rem;
+  background-color: rgb(42, 42, 42);
+  width: 400px;
+  height: 40px;
+  border: 1px solid transparent;
+}
+
+.input_container::placeholder {
+  color: #b0b0b0;
+  opacity: 1;
+  padding-left: 4px;
+}
+
+.input_container:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
 }

@@ -37,26 +37,31 @@ export default function Token(): JSX.Element {
   const [fromAddress, setFromAddress] = useState<string>("");
   const [toAddress, setToAddress] = useState<string>("");
   const [showErrors, setShowErrors] = useState(false);
+  const [isSearch, setIsSearch] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await getTransactions({
+          hash_address: transactionHash,
           page: page,
+          from_address: fromAddress,
+          to_address: toAddress,
         });
         setTotal(res.total ?? 0);
         if (res.transactions) {
           setTransactions(res.transactions ?? []);
         } else {
-          setError("Wrong response format");
+          setTransactions([]);
         }
       } catch (e: any) {
-        setError(e?.message ?? "Unexpected error");
+        setTransactions([]);
       } finally {
         setLoading(false);
+        setIsSearch(false);
       }
     })();
-  }, [page]);
+  }, [page, isSearch]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -72,15 +77,6 @@ export default function Token(): JSX.Element {
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
   const handleGoto = (p: number) => setPage(p);
-
-  const handleSearch = () => {
-    setShowErrors(true);
-    if (!transactionHash || !fromAddress || !toAddress) {
-      console.log("Certains champs sont vides !");
-      return;
-    }
-    console.log("Recherche lancée !");
-  };
 
   const getInputClass = (value: string) =>
     `input_container ${showErrors && !value ? "input_error" : ""}`;
@@ -124,7 +120,9 @@ export default function Token(): JSX.Element {
 
         <div className="relative flex items-center justify-center mb-8">
           <button
-            onClick={handleSearch}
+            onClick={() => {
+              setIsSearch(true);
+            }}
             className="absolute left-0 text-white px-4 py-2 rounded-md cursor-pointer
              bg-[#2f3b8f] transition-all duration-300
              hover:-translate-y-1 hover:shadow-lg
