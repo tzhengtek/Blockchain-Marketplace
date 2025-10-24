@@ -33,7 +33,10 @@ export default function Token(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
-  const [search, setSearch] = useState<string>("");
+  const [transactionHash, setTransactionHash] = useState<string>("");
+  const [fromAddress, setFromAddress] = useState<string>("");
+  const [toAddress, setToAddress] = useState<string>("");
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -70,7 +73,17 @@ export default function Token(): JSX.Element {
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
   const handleGoto = (p: number) => setPage(p);
 
-  const startIndex = (page - 1) * PAGE_SIZE + 1;
+  const handleSearch = () => {
+    setShowErrors(true);
+    if (!transactionHash || !fromAddress || !toAddress) {
+      console.log("Certains champs sont vides !");
+      return;
+    }
+    console.log("Recherche lancée !");
+  };
+
+  const getInputClass = (value: string) =>
+    `input_container ${showErrors && !value ? "input_error" : ""}`;
 
   return (
     <section className="section">
@@ -86,15 +99,42 @@ export default function Token(): JSX.Element {
           Transaction history
         </h1>
       </div>
-      <div className="search_bar">
+      <div className="input_section">
         <input
+          className={getInputClass(transactionHash)}
           type="text"
-          placeholder="Search address ..."
-          value={search}
-          onKeyDown={handleKeyDown}
-          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Transaction hash ..."
+          value={transactionHash}
+          onChange={(e) => setTransactionHash(e.target.value)}
         />
+        <input
+          className={getInputClass(fromAddress)}
+          type="text"
+          placeholder="From address ..."
+          value={fromAddress}
+          onChange={(e) => setFromAddress(e.target.value)}
+        />
+        <input
+          className={getInputClass(toAddress)}
+          type="text"
+          placeholder="To address ..."
+          value={toAddress}
+          onChange={(e) => setToAddress(e.target.value)}
+        />
+
+        <div className="relative flex items-center justify-center mb-8">
+          <button
+            onClick={handleSearch}
+            className="absolute left-0 text-white px-4 py-2 rounded-md cursor-pointer
+             bg-[#2f3b8f] transition-all duration-300
+             hover:-translate-y-1 hover:shadow-lg
+             active:translate-y-1 active:shadow-md"
+          >
+            Search
+          </button>
+        </div>
       </div>
+
       <div className="section_header">
         <div>Hash</div>
         <div>From</div>
