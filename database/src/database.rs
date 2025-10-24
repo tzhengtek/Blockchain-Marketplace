@@ -13,6 +13,40 @@ const INSERT_INTO_BLOCK: &str = "
 use utoipa::ToSchema;
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
+pub struct NFTEvent {
+    pub owner: String,
+    pub token_id: i64,
+    pub contract_address: String,
+}
+
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
+pub struct ListedNFT {
+    pub seller: String,
+    pub token_id: i64,
+    pub nft_address: String,
+    pub price: i64,
+}
+
+#[serde_with::serde_as]
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct NFTParams {
+    pagination: i64,
+    limit: i64,
+    owner: Option<String>,
+}
+
+impl Default for NFTParams {
+    fn default() -> Self {
+        Self {
+            pagination: 1,
+            limit: 50,
+            owner: None,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, ToSchema)]
 pub struct TransactionEvent {
     pub transaction_hash: String,
     pub from_address: String,
@@ -64,6 +98,71 @@ impl DatabasePool {
         tracing::info!(": SUCCESS !");
         Ok(Self(provider))
     }
+
+    pub async fn get_listing_nft(&self) -> Result<Vec<ListedNFT>, sqlx::Error> {
+        let res = sqlx::query_as::<_, ListedNFT>("SELECT * FROM marketplace")
+            .fetch_all(&self.0)
+            .await?;
+        Ok(res)
+    }
+
+    pub async fn solding_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1")
+            .bind(&nft_contract)
+            .fetch_optional(&self.0)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn listing_nft(
+        &self,
+        nft_contract: String,
+        token_id: u64,
+        seller: String,
+        price: u64,
+    ) -> Result<(), sqlx::Error> {
+        tracing::info!("Listing NFT...");
+        sqlx::query("INSERT INTO marketplace (nft_contract, seller, token_id, price) VALUES ($1, $2, $3, $4)")
+        .bind(&nft_contract).bind(&seller).bind(i64::try_from(token_id).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?).bind(i64::try_from(price).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?).fetch_optional(&self.0).await?;
+        Ok(())
+    }
+
+    pub async fn add_nft(
+        &self,
+        owner: String,
+        token_id: u64,
+        contract_address: &String,
+    ) -> Result<(), sqlx::Error> {
+        tracing::info!("Adding NFT...");
+        sqlx::query("INSERT INTO nft (owner, token_id, contract_address) VALUES ($1, $2, $3)")
+            .bind(&owner)
+            .bind(i64::try_from(token_id).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?)
+            .bind(&contract_address)
+            .fetch_optional(&self.0)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn add_kyc(&self, wallet_account: String) -> Result<(), sqlx::Error> {
+        tracing::info!("Adding KYC in database...");
+        sqlx::query(
+            "INSERT INTO \"user\" (address, iskycverified) VALUES ($1, $2) ON CONFLICT (address) DO NOTHING",
+        ).bind(&wallet_account).bind(true).fetch_optional(&self.0).await?;
+        Ok(())
+    }
+
     pub async fn add_block(&self, block_number: u64) -> Result<i32, sqlx::Error> {
         tracing::info!("Adding block number...");
         let row = sqlx::query(INSERT_INTO_BLOCK)
@@ -103,10 +202,37 @@ impl DatabasePool {
         Ok(())
     }
 
+    pub async fn get_nft(
+        &self,
+        nft_params: &NFTParams,
+    ) -> Result<(u64, Vec<NFTEvent>), sqlx::Error> {
+        let filter_owner = match &nft_params.owner {
+            Some(owner) => format!("AND owner='{}'", owner),
+            None => "".to_string(),
+        };
+        let get_nft_request = format!(
+            "SELECT * FROM nft WHERE 1=1 {filter_owner} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
+        );
+        let results = query_as::<_, NFTEvent>(&get_nft_request)
+            .bind(nft_params.limit)
+            .bind(cmp::max(nft_params.pagination - 1, 0) * nft_params.limit)
+            .fetch_all(&self.0)
+            .await?;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM nft")
+            .fetch_one(&self.0)
+            .await?;
+        Ok((count as u64, results))
+    }
+
     pub async fn get_transaction(
         &self,
         transaction_params: &TransactionParams,
     ) -> Result<(u64, Vec<TransactionEvent>), sqlx::Error> {
+        tracing::info!(transaction_params.contract_address);
+        tracing::info!(transaction_params.transaction_hash);
+        tracing::info!(transaction_params.from);
+        tracing::info!(transaction_params.contract_address);
         let filter_contract = match &transaction_params.contract_address {
             Some(address) => format!("AND contract_address='{}'", address),
             None => "".to_string(),
@@ -116,16 +242,17 @@ impl DatabasePool {
             None => "".to_string(),
         };
         let filter_from = match &transaction_params.from {
-            Some(address) => format!("AND from='{}'", address),
+            Some(address) => format!("AND from_address='{}'", address),
             None => "".to_string(),
         };
         let filter_to = match &transaction_params.to {
-            Some(address) => format!("AND to='{}'", address),
+            Some(address) => format!("AND to_address='{}'", address),
             None => "".to_string(),
         };
         let get_transaction_request = format!(
             "SELECT * FROM token WHERE 1=1 {filter_contract} {filter_from} {filter_to} {filter_transaction} ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
         );
+        tracing::info!(get_transaction_request);
         tracing::info!("Fetching transaction from database...");
         let results = query_as::<_, TransactionEvent>(&get_transaction_request)
             .bind(transaction_params.limit)
