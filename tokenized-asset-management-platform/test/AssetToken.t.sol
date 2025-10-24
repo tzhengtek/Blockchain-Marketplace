@@ -32,8 +32,8 @@ contract AssetTokenTest is Test {
 
         // Deploy AssetToken
         assetToken = new AssetToken(
-            "Asset Token",
-            "ATK",
+            "RealVault Protocol",
+            "RVP",
             DECIMALS,
             INITIAL_SUPPLY,
             owner,
@@ -50,8 +50,8 @@ contract AssetTokenTest is Test {
     function test_Constructor() public view {
         assertEq(assetToken.owner(), owner);
         assertEq(address(assetToken.kycRegistry()), address(kycRegistry));
-        assertEq(assetToken.name(), "Asset Token");
-        assertEq(assetToken.symbol(), "ATK");
+        assertEq(assetToken.name(), "RealVault Protocol");
+        assertEq(assetToken.symbol(), "RVP");
         assertEq(assetToken.decimals(), DECIMALS);
         assertEq(assetToken.totalSupply(), INITIAL_SUPPLY * 10 ** DECIMALS);
         assertEq(assetToken.balanceOf(owner), INITIAL_SUPPLY * 10 ** DECIMALS);
@@ -60,8 +60,8 @@ contract AssetTokenTest is Test {
     function test_Constructor_RevertWhen_InvalidKYCRegistry() public {
         vm.expectRevert("AssetToken: Invalid KYC registry address");
         new AssetToken(
-            "Asset Token",
-            "ATK",
+            "RealVault Protocol",
+            "RVP",
             DECIMALS,
             INITIAL_SUPPLY,
             owner,

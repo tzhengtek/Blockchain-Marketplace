@@ -1,0 +1,198 @@
+:root {
+  --bg-gradient: linear-gradient(
+    90deg,
+    rgba(20, 20, 30, 0.85),
+    rgba(30, 30, 50, 0.85)
+  );
+  --backdrop-blur: 8px;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --card-bg: rgba(10, 10, 14, 0.85);
+  --muted: #9ca3af;
+  --primary: #7c3aed;
+  --text-white: #ffffff;
+  --shadow-glow: 0 6px 20px rgba(124, 58, 237, 0.25);
+}
+
+.section {
+  padding-top: 6rem;
+}
+
+.swap-container {
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.card {
+  border: 1px solid hsl(240 4% 16% / 0.6);
+  border-radius: 0.75rem;
+  background: var(--bg-gradient);
+  overflow: hidden;
+}
+
+.glass {
+  backdrop-filter: blur(14px);
+}
+
+.shadow {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.cardHeader {
+  padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+}
+
+.cardTitle {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #7c3aed, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cardContent {
+  padding: 1rem 1.25rem 1.25rem 1.25rem;
+  display: grid;
+  row-gap: 1rem;
+}
+
+.fieldGroup {
+  display: grid;
+  row-gap: 0.5rem;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: hsl(240 5% 64%);
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  height: 3.5rem;
+  font-size: 1.125rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(240 4% 16% / 1);
+  background: rgba(120, 120, 140, 0.15);
+  padding: 0 6.5rem 0 0.9rem;
+  color: #eaeaf0;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+.tokenBadge {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.tokenBadgeTextPrimary {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #eaeaf0;
+}
+
+.tokenBadgeTextSecondary {
+  font-size: 0.75rem;
+  color: hsl(240 5% 64%);
+}
+
+.switchRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.switchBtn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid hsl(0, 0%, 44%);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.switchBtn:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.35);
+}
+
+.rateBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid hsl(240 4% 16% / 1);
+  border-radius: 0.5rem;
+  background: rgba(120, 120, 140, 0.15);
+}
+
+.rateLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rateLabel {
+  font-size: 0.875rem;
+  color: #eaeaf0;
+}
+
+.rateValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #eaeaf0;
+}
+
+.primaryBtn {
+  width: 100%;
+  height: 3rem;
+  border: 0;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #0b0b12;
+  background: linear-gradient(90deg, #7c3aed, #22d3ee);
+  transition: box-shadow 0.25s ease, transform 0.03s ease;
+}
+
+.primaryBtn:hover {
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.35),
+    0 0 22px rgba(124, 58, 237, 0.35) inset;
+}
+
+.primaryBtn:active {
+  transform: translateY(1px);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconSm {
+  width: 1rem;
+  height: 1rem;
+  vertical-align: middle;
+}
+
+.iconXs {
+  width: 0.9rem;
+  height: 0.9rem;
+  vertical-align: middle;
+}

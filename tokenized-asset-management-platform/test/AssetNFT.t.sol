@@ -34,7 +34,7 @@ contract AssetNFTTest is Test {
         kycRegistry = new KYCRegistry(owner);
 
         // Deploy AssetNFT
-        assetNFT = new AssetNFT("Asset NFT", "ANFT", owner, address(kycRegistry));
+        assetNFT = new AssetNFT("RealVault Assets", "RVA", owner, address(kycRegistry));
 
         // KYC verify users
         kycRegistry.addKYC(user1);
@@ -46,13 +46,13 @@ contract AssetNFTTest is Test {
     function test_Constructor() public view {
         assertEq(assetNFT.owner(), owner);
         assertEq(address(assetNFT.kycRegistry()), address(kycRegistry));
-        assertEq(assetNFT.name(), "Asset NFT");
-        assertEq(assetNFT.symbol(), "ANFT");
+        assertEq(assetNFT.name(), "RealVault Assets");
+        assertEq(assetNFT.symbol(), "RVA");
     }
 
     function test_Constructor_RevertWhen_InvalidKYCRegistry() public {
         vm.expectRevert("AssetNFT: Invalid KYC registry address");
-        new AssetNFT("Asset NFT", "ANFT", owner, address(0));
+        new AssetNFT("RealVault Assets", "RVA", owner, address(0));
     }
 
     // ============ mintAsset Tests ============
