@@ -147,7 +147,7 @@ async fn update_nft(
 ) -> Result<StatusCode, AppError> {
     let _ = state
         .1
-        .update_nft_price(payload.token_id, payload.price)
+        .update_nft_price(payload.contract_address, payload.token_id, payload.price)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

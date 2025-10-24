@@ -18,6 +18,8 @@ pub struct ContractSettings {
     pub nft_address: Address,
     pub token_address: Address,
     pub kyc_address: Address,
+    pub market_address: Address,
+    pub oracle_address: Address,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,11 +39,11 @@ impl ContractSettings {
 
 impl Settings {
     pub fn load() -> Result<Settings, Error> {
-        dotenv().ok(); // Load .env into environment variables
+        dotenv().ok();
 
         let config_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let default_file_path = config_dir.join("src/config/default.toml");
-        // Convert to a string slice for the config crate
+
         let config = Config::builder()
             .add_source(config::File::from(default_file_path).required(true))
             .add_source(Environment::default().separator("__"))

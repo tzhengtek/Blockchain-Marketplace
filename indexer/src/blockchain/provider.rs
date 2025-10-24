@@ -38,6 +38,20 @@ sol! {
     "examples/abi/KYC.json",
 }
 
+sol! {
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    ORACLE,
+    "examples/abi/ORACLE.json",
+}
+
+sol! {
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    MARKET,
+    "examples/abi/MARKET.json",
+}
+
 use colored::Colorize;
 
 use futures_util::StreamExt;
@@ -93,6 +107,36 @@ pub struct BlockchainIndexer {
             RootProvider,
         >,
     >,
+    oracle_contract: ORACLE::ORACLEInstance<
+        FillProvider<
+            JoinFill<
+                JoinFill<
+                    Identity,
+                    JoinFill<
+                        GasFiller,
+                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
+                    >,
+                >,
+                WalletFiller<EthereumWallet>,
+            >,
+            RootProvider,
+        >,
+    >,
+    market_contract: MARKET::MARKETInstance<
+        FillProvider<
+            JoinFill<
+                JoinFill<
+                    Identity,
+                    JoinFill<
+                        GasFiller,
+                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
+                    >,
+                >,
+                WalletFiller<EthereumWallet>,
+            >,
+            RootProvider,
+        >,
+    >,
     nft_address: Address,
     token_address: Address,
 }
@@ -115,11 +159,15 @@ impl BlockchainIndexer {
 
         let kyc_contract = KYC::new(settings.contract.kyc_address, provider.clone());
         let nft_contract = NFT::new(settings.contract.nft_address, provider.clone());
+        let oracle_contract = ORACLE::new(settings.contract.oracle_address, provider.clone());
+        let market_contract = MARKET::new(settings.contract.market_address, provider.clone());
         tracing::info!(": SUCCESS !");
         Ok(Self {
             provider: provider,
             kyc_contract: kyc_contract,
             nft_contract: nft_contract,
+            oracle_contract: oracle_contract,
+            market_contract: market_contract,
             nft_address: settings.contract.nft_address,
             token_address: settings.contract.token_address,
         })
@@ -134,14 +182,22 @@ impl BlockchainIndexer {
         Ok(val)
     }
 
-    pub async fn update_nft_price(&self, token_id: u64, price: u64) -> Result<()> {
+    pub async fn update_nft_price(
+        &self,
+        contract_address: String,
+        token_id: u64,
+        price: u64,
+    ) -> Result<()> {
         tracing::info!("Updating nft price...");
         let token_id = Uint::<256, 4>::from(token_id);
         let price: Uint<256, 4> = Uint::<256, 4>::from(price);
 
+        let contract_address = Address::from_str(&contract_address)
+            .map_err(|_| Error::msg("Couldn't convert string to Address"))?;
+
         let tx = self
-            .nft_contract
-            .updateAssetValue(token_id, price)
+            .oracle_contract
+            .updateNFTPrice(contract_address, token_id, price)
             .gas_price(100_000_000u128);
         let sendable_tx = tx.with_cloned_provider();
         let pending_tx = sendable_tx.send().await?;
@@ -226,8 +282,40 @@ impl BlockchainIndexer {
             // let contract_address = match contracts_settings.identify_contract(log.address()) {
             //     Some(address) => Ok(address),
             //     None => Err(anyhow!("Not a existing contract")),
-            // };
+            // }
             match log.topic0() {
+                Some(&MARKET::Sold::SIGNATURE_HASH) => {
+                    let MARKET::Sold {
+                        nftContract,
+                        seller,
+                        buyer,
+                        tokenId,
+                        price,
+                    } = log.log_decode()?.inner.data;
+
+                    tracing::info!("Solding NFT from marketplace...");
+                    let nft_contract = nftContract.to_string();
+                    pool.solding_nft(nft_contract).await?;
+                }
+                Some(&MARKET::Listed::SIGNATURE_HASH) => {
+                    let MARKET::Listed {
+                        nftContract,
+                        tokenId,
+                        seller,
+                        price,
+                    } = log.log_decode()?.inner.data;
+
+                    tracing::info!("Adding new NFT to marketplace...");
+                    let nft_contract = nftContract.to_string();
+                    let seller = seller.to_string();
+                    let token_id =
+                        u64::try_from(tokenId).map_err(|_| Error::msg("Token ID doesn't fit"))?;
+                    let price =
+                        u64::try_from(price).map_err(|_| Error::msg("Price doesn't fit"))?;
+
+                    pool.listing_nft(nft_contract, token_id, seller, price)
+                        .await?;
+                }
                 Some(&NFT::Transfer::SIGNATURE_HASH | &BEP20::Transfer::SIGNATURE_HASH) => {
                     let addr = log.address();
 

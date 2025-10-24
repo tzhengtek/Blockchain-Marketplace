@@ -65,6 +65,35 @@ impl DatabasePool {
         Ok(Self(provider))
     }
 
+    pub async fn solding_nft(&self, nft_contract: String) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1")
+            .bind(&nft_contract)
+            .fetch_optional(&self.0)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn listing_nft(
+        &self,
+        nft_contract: String,
+        token_id: u64,
+        seller: String,
+        price: u64,
+    ) -> Result<(), sqlx::Error> {
+        tracing::info!("Listing NFT...");
+        sqlx::query("INSERT INTO marketplace (nft_contract, seller, token_id, price) VALUES ($1, $2, $3, $4)")
+        .bind(&nft_contract).bind(&seller).bind(i64::try_from(token_id).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?).bind(i64::try_from(price).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?).fetch_optional(&self.0).await?;
+        Ok(())
+    }
+
     pub async fn add_nft(
         &self,
         owner: String,
