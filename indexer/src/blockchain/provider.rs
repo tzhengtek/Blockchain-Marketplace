@@ -251,7 +251,6 @@ impl BlockchainIndexer {
                     } = log.log_decode()?.inner.data;
                     let token_id =
                         u64::try_from(tokenId).map_err(|_| Error::msg("Price doesn't fit"))?;
-
                     tracing::info!("Unlisting NFT from marketplace...");
                     let nft_contract = nftContract.to_string();
                     pool.removing_nft(nft_contract, token_id).await?;

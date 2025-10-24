@@ -115,7 +115,11 @@ impl DatabasePool {
         tracing::info!("Removing (solded) nft from marketplace...");
         sqlx::query("DELETE FROM marketplace WHERE nft_contract=$1 AND token_id=$2")
             .bind(&nft_contract)
-            .bind(token_id)
+            .bind(i64::try_from(token_id).map_err(|e| {
+                sqlx::Error::InvalidArgument(
+                    format!("Error while converting to i64 {e:?}").to_string(),
+                )
+            })?)
             .fetch_optional(&self.0)
             .await?;
         Ok(())
