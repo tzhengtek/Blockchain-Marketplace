@@ -17,7 +17,7 @@ use http::Method;
 use tower_http::cors::{Any, CorsLayer};
 
 use anyhow::{Error, Result};
-use database::{DatabasePool, TransactionParams};
+use database::{DatabasePool, ListedNFT, NFTEvent, NFTParams, TransactionParams};
 use dotenv::dotenv;
 use indexer::{BlockchainIndexer, Settings};
 
@@ -74,7 +74,15 @@ struct KYCRequest {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(check_wallet_kyc, add_wallet_kyc, remove_wallet_kyc, get_transaction),
+    paths(
+        check_wallet_kyc,
+        add_wallet_kyc,
+        remove_wallet_kyc,
+        get_transaction,
+        update_nft,
+        get_nft,
+        get_listed_nft
+    ),
     components(schemas(KYCRequest))
 )]
 struct ApiDoc;
@@ -115,7 +123,8 @@ fn api_router(shared_state: Arc<AppState>) -> Router {
                 .delete(remove_wallet_kyc),
         )
         .route("/transaction", get(get_transaction))
-        .route("/nft", post(update_nft))
+        .route("/nft", post(update_nft).get(get_nft))
+        .route("/nft-listed", get(get_listed_nft))
         .with_state(shared_state)
         .layer(cors)
 }
@@ -126,11 +135,67 @@ pub struct TransactionListReponse {
     transactions: Vec<TransactionEvent>,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct NFTListReponse {
+    total: u64,
+    nfts: Vec<NFTEvent>,
+}
+
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct UpdateNFTRequest {
     contract_address: String,
     token_id: u64,
     price: u64,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/nft-listed",
+    responses(
+        (status = 200, description = "KYC status", body = bool)
+    )
+)]
+async fn get_listed_nft(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ListedNFT>>, (StatusCode, String)> {
+    tracing::info!("Getting Transaction...");
+    match state.0.get_listing_nft().await {
+        Ok(listed_nft) => Ok(Json(listed_nft)),
+        Err(e) => Err((
+            StatusCode::BAD_GATEWAY,
+            format!("Error while retrieving transaction {e:?}"),
+        )),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/nft",
+    params(
+        ("owner" = Option<String>, Query, description = "Owner address of nft"),
+        ("limit" = Option<u32>, Query, description = "Optional limit for number of results"),
+        ("pagination" = Option<u32>, Query, description = "Optional pagination for chunk of limited number of results"),
+    ),
+    responses(
+        (status = 200, description = "Nfts retrieved", body = [NFTListReponse]),
+        (status = 502, description = "Error fetching transactions")
+    )
+)]
+async fn get_nft(
+    Query(payload): Query<NFTParams>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<NFTListReponse>, (StatusCode, String)> {
+    tracing::info!("Getting Transaction...");
+    match state.0.get_nft(&payload).await {
+        Ok((count, nfts)) => Ok(Json(NFTListReponse {
+            total: count,
+            nfts: nfts,
+        })),
+        Err(e) => Err((
+            StatusCode::BAD_GATEWAY,
+            format!("Error while retrieving transaction {e:?}"),
+        )),
+    }
 }
 
 #[utoipa::path(
@@ -211,7 +276,7 @@ async fn remove_wallet_kyc(
     get,
     path = "/api/transaction",
     params(
-        ("transaction_address" = Option<String>, Query, description = "Transaction address to query transactions"),
+        ("transaction_hash" = Option<String>, Query, description = "Transaction address to query transactions"),
         ("contract_address" = Option<String>, Query, description = "Wallet address to query contract"),
         ("limit" = Option<u32>, Query, description = "Optional limit for number of results"),
         ("pagination" = Option<u32>, Query, description = "Optional pagination for chunk of limited number of results"),

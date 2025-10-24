@@ -267,6 +267,7 @@ impl BlockchainIndexer {
             contracts_settings.token_address,
             contracts_settings.nft_address,
             contracts_settings.kyc_address,
+            contracts_settings.market_address,
         ];
 
         let filter = Filter::new()
@@ -279,10 +280,6 @@ impl BlockchainIndexer {
         let mut stream = sub.into_stream();
 
         while let Some(log) = stream.next().await {
-            // let contract_address = match contracts_settings.identify_contract(log.address()) {
-            //     Some(address) => Ok(address),
-            //     None => Err(anyhow!("Not a existing contract")),
-            // }
             match log.topic0() {
                 Some(&MARKET::Sold::SIGNATURE_HASH) => {
                     let MARKET::Sold {
