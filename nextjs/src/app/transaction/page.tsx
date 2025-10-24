@@ -14,12 +14,18 @@ type Transaction = {
   contract_address?: string | null;
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 
 function copyToClipboard(text: string) {
   if (!text) return;
   navigator.clipboard.writeText(text).catch(console.error);
 }
+
+const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === "enter" || e.key === "Enter") {
+    e.preventDefault();
+  }
+};
 
 export default function Transaction(): JSX.Element {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -27,39 +33,34 @@ export default function Transaction(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
+  const [search, setSearch] = useState<string>("");
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await getTransactions();
-        if (Array.isArray(res) && res.length > 0) {
-          setTotal(res[0].total ?? 0);
-          setTransactions(res[0].transactions ?? []);
-        } else if (res?.transactions) {
-          setTotal(res.total ?? 0);
+        const res = await getTransactions({
+          page: page,
+        });
+        setTotal(res.total ?? 0);
+        if (res.transactions) {
           setTransactions(res.transactions ?? []);
         } else {
-          setError("Format de réponse inattendu");
+          setError("Wrong response format");
         }
       } catch (e: any) {
-        setError(e?.message ?? "Erreur inattendue");
+        setError(e?.message ?? "Unexpected error");
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [page]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
-  }, [transactions.length]);
-
-  const pageItems = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return transactions.slice(start, start + PAGE_SIZE);
-  }, [transactions, page]);
+    return Math.max(1, Math.ceil(total / PAGE_SIZE));
+  }, [total]);
 
   useEffect(() => {
-    setPage(1);
+    setPage(page);
   }, [transactions.length]);
 
   if (loading) return <div className="hint">Loading...</div>;
@@ -70,12 +71,18 @@ export default function Transaction(): JSX.Element {
   const handleGoto = (p: number) => setPage(p);
 
   const startIndex = (page - 1) * PAGE_SIZE + 1;
-  const endIndex = Math.min(page * PAGE_SIZE, transactions.length);
 
   return (
     <section className="section">
-      <div className="section_topbar"></div>
-
+      <div className="search_bar">
+        <input
+          type="text"
+          placeholder="Search address ..."
+          value={search}
+          onKeyDown={handleKeyDown}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
       <div className="section_header">
         <div>Hash</div>
         <div>From</div>
@@ -85,8 +92,7 @@ export default function Transaction(): JSX.Element {
         <div>Contract</div>
         <div>Date</div>
       </div>
-
-      {pageItems.map((t) => (
+      {transactions.map((t) => (
         <div className="data_container" key={t.transaction_hash}>
           <div
             className="adress_info"
@@ -122,9 +128,8 @@ export default function Transaction(): JSX.Element {
         </div>
       ))}
       <div className="range">
-        {startIndex}–{endIndex} / {transactions.length}
+        {startIndex} / {total}
       </div>
-
       <div className="pagination">
         <button
           className="page_btn"

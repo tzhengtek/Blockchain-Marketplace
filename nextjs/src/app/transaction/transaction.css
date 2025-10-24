@@ -79,6 +79,35 @@
 }
 
 .page_num.active {
-  outline: 2px solid rgb(255, 255, 255);
+  outline: 2px solid rgb(66, 66, 66);
   font-weight: 600;
+}
+
+.search_bar {
+  margin-bottom: 1rem;
+  background-color: rgb(42, 42, 42);
+  border-radius: 8px;
+  width: 500px;
+  height: 40px;
+}
+
+.search_bar input {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.search_bar input::placeholder {
+  color: #b0b0b0;
+  opacity: 1;
+  padding-left: 4px;
+}
+
+.search_bar input:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
 }
