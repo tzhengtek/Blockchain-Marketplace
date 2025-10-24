@@ -2,7 +2,6 @@ import { Header } from "@/components/atoms/header";
 import { AppProviders } from "@/components/providers/app-providers";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { KYCGuard } from "./kyc-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,9 +22,8 @@ export default async function RootLayout({
       <body>
         <AppProviders cookies={cookies}>
           <Header projectName="Blockchain" />
-          <KYCGuard>
-            {children}
-          </KYCGuard>
+          {/* <KYCGuard>{children}</KYCGuard> */}
+          <>{children}</>
         </AppProviders>
       </body>
     </html>

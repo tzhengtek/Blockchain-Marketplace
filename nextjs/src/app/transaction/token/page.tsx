@@ -1,18 +1,10 @@
 "use client";
 
-import React, { JSX, useEffect, useMemo, useState } from "react";
-import "./token.css";
-import { getTransactions } from "@/utils/request";
-
-type Transaction = {
-  transaction_hash: string;
-  from_address: string;
-  to_address: string;
-  timestamp: string;
-  value: string | number;
-  block_id: number;
-  contract_address?: string | null;
-};
+import React, { JSX, useMemo, useState } from "react";
+import { useTransactions } from "@/hooks/use-transactions";
+import { Transaction } from "@/types/transaction";
+import { getBscScanAddressUrl, getBscScanTxUrl } from "@/utils/bscscan";
+import { TransactionSkeleton } from "@/components/skeletons/transaction-skeleton";
 
 const PAGE_SIZE = 50;
 
@@ -28,61 +20,39 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 };
 
 export default function Token(): JSX.Element {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
   const [transactionHash, setTransactionHash] = useState<string>("");
   const [fromAddress, setFromAddress] = useState<string>("");
   const [toAddress, setToAddress] = useState<string>("");
   const [showErrors, setShowErrors] = useState(false);
-  const [isSearch, setIsSearch] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await getTransactions({
-          hash_address: transactionHash,
-          page: page,
-          from_address: fromAddress,
-          to_address: toAddress,
-        });
-        setTotal(res.total ?? 0);
-        if (res.transactions) {
-          setTransactions(res.transactions ?? []);
-        } else {
-          setTransactions([]);
-        }
-      } catch (e: any) {
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-        setIsSearch(false);
-      }
-    })();
-  }, [page, isSearch]);
+  const { data, isLoading, isError } = useTransactions({
+    hash_address: transactionHash,
+    page: page,
+    from_address: fromAddress,
+    to_address: toAddress,
+  });
+
+  const transactions = data?.transactions ?? [];
+  const total = data?.total ?? 0;
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(total / PAGE_SIZE));
   }, [total]);
 
-  useEffect(() => {
-    setPage(page);
-  }, [transactions.length]);
-
-  if (loading) return <div className="hint">Loading...</div>;
-  if (error) return <div className="error">Error: {error}</div>;
+  if (isError) return <div className="text-red-500 pl-16 text-center py-8">Error loading transactions</div>;
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
   const handleGoto = (p: number) => setPage(p);
 
   const getInputClass = (value: string) =>
-    `input_container ${showErrors && !value ? "input_error" : ""}`;
+    `px-4 py-2.5 rounded-lg text-white mb-8 bg-[rgb(42,42,42)] w-[400px] h-10 border placeholder:text-[#b0b0b0] placeholder:opacity-100 placeholder:pl-1 focus:outline-none focus:bg-white/5 focus:text-white ${
+      showErrors && !value ? "border-red-500" : "border-transparent"
+    }`;
 
   return (
-    <section className="section">
+    <section className="p-8">
       <div className="relative flex items-center justify-center mb-8">
         <button
           onClick={() => window.history.back()}
@@ -95,7 +65,7 @@ export default function Token(): JSX.Element {
           Transaction history
         </h1>
       </div>
-      <div className="input_section">
+      <div className="flex items-center gap-4 flex-wrap mb-8">
         <input
           className={getInputClass(transactionHash)}
           type="text"
@@ -117,23 +87,9 @@ export default function Token(): JSX.Element {
           value={toAddress}
           onChange={(e) => setToAddress(e.target.value)}
         />
-
-        <div className="relative flex items-center justify-center mb-8">
-          <button
-            onClick={() => {
-              setIsSearch(true);
-            }}
-            className="absolute left-0 text-white px-4 py-2 rounded-md cursor-pointer
-             bg-[#2f3b8f] transition-all duration-300
-             hover:-translate-y-1 hover:shadow-lg
-             active:translate-y-1 active:shadow-md"
-          >
-            Search
-          </button>
-        </div>
       </div>
 
-      <div className="section_header">
+      <div className="grid grid-cols-[180px_180px_180px_180px_180px_180px_180px_180px] items-center gap-x-[22px] font-semibold py-2.5 px-4 border-b-[3px] border-[#242936]">
         <div>Hash</div>
         <div>From</div>
         <div>To</div>
@@ -142,44 +98,64 @@ export default function Token(): JSX.Element {
         <div>Contract</div>
         <div>Date</div>
       </div>
-      {transactions.map((t) => (
-        <div className="data_container" key={t.transaction_hash}>
-          <div
-            className="address_info"
-            title={t.transaction_hash}
-            onClick={() => copyToClipboard(t.transaction_hash)}
-          >
-            {t.transaction_hash.slice(0, 10)}…
+      {isLoading ? (
+        <TransactionSkeleton />
+      ) : (
+        transactions.map((t: Transaction) => (
+          <div className="grid grid-cols-[180px_180px_180px_180px_180px_180px_180px_180px] items-center gap-x-[22px] py-3.5 px-4 border-b border-[#242936] bg-transparent hover:bg-white/[0.031]" key={t.transaction_hash}>
+            <div className="flex text-blue-400 underline hover:cursor-pointer hover:text-blue-300">
+              <a
+                href={getBscScanTxUrl(t.transaction_hash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {t.transaction_hash.slice(0, 10)}…
+              </a>
+            </div>
+            <div className="flex text-blue-400 underline hover:cursor-pointer hover:text-blue-300">
+              <a
+                href={getBscScanAddressUrl(t.from_address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {t.from_address.slice(0, 10)}…
+              </a>
+            </div>
+            <div className="flex text-blue-400 underline hover:cursor-pointer hover:text-blue-300">
+              <a
+                href={getBscScanAddressUrl(t.to_address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {t.to_address.slice(0, 10)}…
+              </a>
+            </div>
+            <div>{t.value}</div>
+            <div>{t.block_id}</div>
+            <div className="flex text-blue-400 underline hover:cursor-pointer hover:text-blue-300">
+              {t.contract_address ? (
+                <a
+                  href={getBscScanAddressUrl(t.contract_address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  {t.contract_address.slice(0, 10)}…
+                </a>
+              ) : (
+                "—"
+              )}
+            </div>
+            <div>{new Date(t.timestamp).toLocaleString()}</div>
           </div>
-          <div
-            className="address_info"
-            title={t.from_address}
-            onClick={() => copyToClipboard(t.from_address)}
-          >
-            {t.from_address.slice(0, 10)}…
-          </div>
-          <div
-            className="address_info"
-            title={t.to_address}
-            onClick={() => copyToClipboard(t.to_address)}
-          >
-            {t.to_address.slice(0, 10)}…
-          </div>
-          <div>{t.value}</div>
-          <div>{t.block_id}</div>
-          <div
-            className="address_info"
-            title={t.contract_address ?? ""}
-            onClick={() => copyToClipboard(t.contract_address ?? "")}
-          >
-            {t.contract_address ? t.contract_address.slice(0, 10) + "…" : "—"}
-          </div>
-          <div>{new Date(t.timestamp).toLocaleString()}</div>
-        </div>
-      ))}
-      <div className="pagination">
+        ))
+      )}
+      <div className="flex gap-1.5 items-center justify-center mt-4 flex-wrap">
         <button
-          className="page_btn"
+          className="bg-[#2f3b8f] px-2.5 py-1.5 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handlePrev}
           disabled={page === 1}
           aria-label="Page précédente"
@@ -194,7 +170,9 @@ export default function Token(): JSX.Element {
           return (
             <button
               key={p}
-              className={`page_num ${p === page ? "active" : ""}`}
+              className={`bg-[#2f3b8f] px-2.5 py-1.5 rounded-md cursor-pointer ${
+                p === page ? "outline outline-2 outline-[rgb(66,66,66)] font-semibold" : ""
+              }`}
               onClick={() => handleGoto(p)}
               aria-current={p === page ? "page" : undefined}
             >
@@ -203,7 +181,7 @@ export default function Token(): JSX.Element {
           );
         })}
         <button
-          className="page_btn"
+          className="bg-[#2f3b8f] px-2.5 py-1.5 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleNext}
           disabled={page === totalPages}
           aria-label="Page suivante"

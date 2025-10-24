@@ -1,10 +1,15 @@
 "use client";
 
+import { Card, CardDescription, CardTitle } from "@/components/atoms/card";
+import { useWalletGuard } from "@/hooks/useWalletGuard";
+
 export default function Home() {
+  useWalletGuard();
+
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1 className="text-4xl font-bold tracking-tight text-accent-foreground">
           Welcome to Blockchain
         </h1>
         <p className="text-lg text-muted-foreground">
@@ -12,28 +17,28 @@ export default function Home() {
         </p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-2xl font-semibold mb-2">Swap</h2>
-            <p className="text-muted-foreground">
+          <Card href="/swap">
+            <CardTitle>Swap</CardTitle>
+            <CardDescription>
               Exchange tokens seamlessly across multiple blockchain networks
-            </p>
-          </div>
+            </CardDescription>
+          </Card>
 
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-2xl font-semibold mb-2">KYC</h2>
-            <p className="text-muted-foreground">
+          <Card href="/kyc">
+            <CardTitle>KYC</CardTitle>
+            <CardDescription>
               Complete your know-your-customer verification to unlock full
               platform features
-            </p>
-          </div>
+            </CardDescription>
+          </Card>
 
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-2xl font-semibold mb-2">Wallet</h2>
-            <p className="text-muted-foreground">
+          <Card href="/transaction">
+            <CardTitle>Wallet</CardTitle>
+            <CardDescription>
               Connect your Web3 wallet using Reown AppKit for secure
               transactions
-            </p>
-          </div>
+            </CardDescription>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import axiosInstance from "@/utils/http-client";
 
 // On autorise GET et POST pour plus de flexibilité
 export async function GET(req: Request) {
@@ -12,24 +13,15 @@ export async function GET(req: Request) {
   }
 
   try {
-    const apiRes = await fetch(`http://localhost:3000/api/kyc?wallet_address=${wallet}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
+    const apiRes = await axiosInstance.get(`/api/kyc?wallet_address=${wallet}`);
 
-    const data = await apiRes.json().catch(() => null);
-    if (!apiRes.ok) {
-      return NextResponse.json(
-        { error: "Remote KYC API error", details: data },
-        { status: apiRes.status }
-      );
-    }
-
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: apiRes.data });
   } catch (err: any) {
+    const status = err.response?.status || 500;
+    const details = err.response?.data || null;
     return NextResponse.json(
-      { error: err.message || "Internal server error" },
-      { status: 500 }
+      { error: err.message || "Internal server error", details },
+      { status }
     );
   }
 }
@@ -43,25 +35,15 @@ export async function POST(req: Request) {
     }
 
     console.log("KYC route POST called for address:", address);
-    const apiRes = await fetch(`http://localhost:3000/api/kyc`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" } ,
-      body: JSON.stringify({ wallet_address: address }),
-    });
+    const apiRes = await axiosInstance.post(`/api/kyc`, { wallet_address: address });
 
-    const data = await apiRes.json().catch(() => null);
-    if (!apiRes.ok) {
-      return NextResponse.json(
-        { error: "Remote KYC API error", details: data },
-        { status: apiRes.status }
-      );
-    }
-
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: apiRes.data });
   } catch (err: any) {
+    const status = err.response?.status || 500;
+    const details = err.response?.data || null;
     return NextResponse.json(
-      { error: err.message || "Internal server error" },
-      { status: 500 }
+      { error: err.message || "Internal server error", details },
+      { status }
     );
   }
 }

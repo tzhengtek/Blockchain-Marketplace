@@ -1,7 +1,6 @@
 "use client";
 
 import React, { JSX } from "react";
-import "./transaction.css";
 
 export default function Transaction(): JSX.Element {
   const navItems = [
