@@ -1,5 +1,4 @@
 use eyre::Result;
-use std::error::Error;
 
 mod blockchain;
 mod config;
@@ -12,8 +11,10 @@ use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{fmt, layer::SubscriberExt};
 
+use anyhow::Error;
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Error> {
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())
@@ -23,8 +24,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Err(e) => panic!("{}", e),
     };
 
-    tracing::info!("{:?}", settings);
-    tracing::info!("POOL");
     let pool = DatabasePool::new(&settings.database_url).await?;
     let indexer = BlockchainIndexer::new(&settings).await?;
     let _ = indexer.fetch(settings.contract, pool).await?;
