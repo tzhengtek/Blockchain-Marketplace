@@ -289,6 +289,29 @@ impl BlockchainIndexer {
                     pool.listing_nft(nft_contract, token_id, seller, price)
                         .await?;
                 }
+                Some(&BEP20::Transfer::SIGNATURE_HASH) => {
+                    tracing::info!("Transfer token...");
+                    let BEP20::Transfer {
+                        from, to, value, ..
+                    } = log.log_decode()?.inner.data;
+                    let block_number: u64 = log
+                        .block_number
+                        .ok_or_else(|| Error::msg("Block number is missing"))?;
+                    let block_id = pool.add_block(block_number).await?;
+                    let transaction = TransactionEvent {
+                        transaction_hash: log
+                            .transaction_hash
+                            .ok_or(Error::msg("Not existing transaction hash"))?
+                            .to_string(),
+                        from_address: from.to_string(),
+                        to_address: to.to_string(),
+                        value: value.to_string(),
+                        block_id,
+                        contract_address: self.token_address.to_string(),
+                        timestamp: None,
+                    };
+                    pool.add_transaction(transaction).await?;
+                }
                 Some(&NFT::Transfer::SIGNATURE_HASH) => {
                     let addr = log.address();
 
