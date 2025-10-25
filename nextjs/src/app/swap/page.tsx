@@ -554,6 +554,7 @@ export default function SwapPage() {
       // Define tokenIn for the transfer step
       const effectiveFrom = from.native ? { ...TOKENS[1] } : from; // if tBNB, we just wrapped to WBNB
 
+<<<<<<< HEAD
       // Prepare multicall array
       const calls: Array<{
         target: `0x${string}`;
@@ -573,6 +574,17 @@ export default function SwapPage() {
           allowFailure: false,
           callData: wrapCallData,
         });
+=======
+      // tBNB -> RVP: wrap then swap
+      if (from.native && toIsRvp) {
+        await call({
+          abi: wbnbAbi,
+          address: WBNB,
+          functionName: "deposit",
+          args: [],
+          value: amountIn,
+        } as any);
+>>>>>>> 379bbabf7d5ac56057be102e63aca6c30eda6eb2
       }
 
       // 1) Transfer tokenIn directly to pair (ERC-20 transfer from user)
@@ -628,8 +640,13 @@ export default function SwapPage() {
         }
       }
 
+<<<<<<< HEAD
       // 3) Add swap call
       const swapCallData = encodeFunctionData({
+=======
+      // 3) Call pair.swap with correct side
+      await call({
+>>>>>>> 379bbabf7d5ac56057be102e63aca6c30eda6eb2
         abi: pairAbi,
         functionName: "swap",
         args: [amount0Out, amount1Out, user, "0x"],
@@ -647,11 +664,14 @@ export default function SwapPage() {
           abi: wbnbAbi,
           functionName: "withdraw",
           args: [out > BigInt(0) ? out : BigInt(0)],
+<<<<<<< HEAD
         });
         calls.push({
           target: WBNB,
           allowFailure: false,
           callData: unwrapCallData,
+=======
+>>>>>>> 379bbabf7d5ac56057be102e63aca6c30eda6eb2
         });
       }
 

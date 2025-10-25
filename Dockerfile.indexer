@@ -1,0 +1,62 @@
+# Multi-stage Dockerfile for Rust indexer
+FROM rust:1.90-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    libssl-dev \
+    pkg-config \
+    build-essential \
+    curl \
+    ca-certificates && \
+    rm -rf /var/lib/apt/lists/* 
+
+# Set PKG_CONFIG_PATH for OpenSSL
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+
+# Copy workspace configuration
+COPY Cargo.toml Cargo.lock ./
+
+COPY .env /app/.env
+
+# Copy all workspace members
+COPY backend/ backend/
+COPY indexer/ indexer/
+COPY database/ database/
+
+# Build the indexer binary in release mode
+RUN cargo build --release --bin indexer
+
+# Runtime stage - minimal image
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    libssl3 \
+    ca-certificates \
+    curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the compiled binary from builder
+COPY --from=builder /app/target/release/indexer /usr/local/bin/indexer
+
+# Set library path
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+
+# Configure runtime environment
+ENV RUST_LOG=info
+
+# Expose port if indexer has HTTP endpoints (optional)
+# EXPOSE 8081
+
+# Health check (optional - adjust based on your indexer)
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+#     CMD curl -f http://localhost:8081/health || exit 1
+
+# Run the indexer binary
+CMD ["indexer"]

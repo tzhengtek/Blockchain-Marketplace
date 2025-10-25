@@ -1,0 +1,63 @@
+# Dockerfile.backeFROM rust:1.90# Multi-stage Dockerfile for Rust workspace with backend, indexer, and database
+FROM rust:1.90-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    libssl-dev \
+    pkg-config \
+    build-essential \
+    curl \
+    ca-certificates && \
+    rm -rf /var/lib/apt/lists/* 
+
+# Set PKG_CONFIG_PATH for OpenSSL
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+
+# Copy workspace configuration
+COPY Cargo.toml Cargo.lock ./
+
+# Copy all workspace members
+COPY backend/ backend/
+COPY indexer/ indexer/
+COPY database/ database/
+
+# Build the backend binary in release mode
+# This will also compile indexer and database as dependencies
+RUN cargo build --release --bin backend 
+
+# Runtime stage - minimal image
+FROM debian:bookworm-slim
+
+WORKDIR /app 
+
+# Install only runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    libssl3 \
+    ca-certificates && \
+    rm -rf /var/lib/apt/lists/* 
+
+# Copy the compiled binary from builder
+COPY --from=builder /app/target/release/backend /usr/local/bin/backend
+
+COPY .env /app/.env
+
+# Set library path
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+
+# Configure runtime environment
+ENV PORT=8080
+ENV RUST_LOG=info
+
+# Expose the application port
+EXPOSE 8080
+
+# Health check (optional)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Run the backend binary
+CMD ["backend"]
