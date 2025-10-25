@@ -153,16 +153,19 @@ impl DatabasePool {
         contract_address: &String,
     ) -> Result<(), sqlx::Error> {
         tracing::info!("Adding NFT to the database...");
-        sqlx::query("INSERT INTO nft (owner, token_id, contract_address) VALUES ($1, $2, $3) ON CONFLICT (owner, token_id) DO NOTHING")
-            .bind(&owner)
-            .bind(i64::try_from(token_id).map_err(|e| {
-                sqlx::Error::InvalidArgument(
-                    format!("Error while converting to i64 {e:?}").to_string(),
-                )
-            })?)
-            .bind(contract_address)
-            .fetch_optional(&self.0)
-            .await?;
+        sqlx::query(
+            "INSERT INTO nft (owner, token_id, contract_address) 
+     VALUES ($1, $2, $3) 
+     ON CONFLICT (token_id, contract_address) 
+     DO UPDATE SET owner = EXCLUDED.owner",
+        )
+        .bind(&owner)
+        .bind(i64::try_from(token_id).map_err(|e| {
+            sqlx::Error::InvalidArgument(format!("Error while converting to i64 {e:?}").to_string())
+        })?)
+        .bind(contract_address)
+        .execute(&self.0)
+        .await?;
         Ok(())
     }
 

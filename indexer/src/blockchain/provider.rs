@@ -2,11 +2,11 @@ use alloy::{
     eips::BlockNumberOrTag,
     network::Ethereum,
     providers::{
-        Identity, Provider, ProviderBuilder, RootProvider, WsConnect,
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
+        Identity, Provider, ProviderBuilder, RootProvider, WsConnect,
     },
     rpc::types::Filter,
     sol,
