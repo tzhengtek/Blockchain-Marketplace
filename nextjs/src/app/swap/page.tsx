@@ -1,25 +1,67 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import "./swap.css";
-import { useAccount, useReadContract, useBalance } from "wagmi";
+import { Button } from "@/components/atoms/button";
+import { Input } from "@/components/atoms/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/atoms/select";
+import { useContractWriter } from "@/utils/wagmi/useContractWriter";
+import { ArrowUpDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   erc20Abi,
+  encodeFunctionData,
   formatUnits,
   getAddress,
   parseUnits,
   zeroAddress,
 } from "viem";
-import { useContractWriter } from "@/utils/wagmi/useContractWriter";
+import { useAccount, useBalance, useReadContract } from "wagmi";
 
 /* -------------------- Addresses (BSC Testnet) -------------------- */
 const WBNB = getAddress("0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd");
-const ASSET = getAddress("0x3DC23E01d7B7555970823274054047E521290C23");
+const ASSET = getAddress("0xcD15905A28927C9001E532c43CD977a49Cae655D");
 const PAIR_ASSET_WBNB = getAddress(
-  "0x5a1175DdB5094B0f4FdD4475e53d22acfF10e8f7"
+  "0xcC2CbDb6AC80A2BDE4c0cB2F7B7743d28E7e710A"
+);
+const MULTICALL_ADDRESS = getAddress(
+  "0x6e5BB1a5Ad6F68A8D7D6A5e47750eC15773d6042"
 );
 
 /* -------------------- ABIs -------------------- */
+const multicallAbi = [
+  {
+    type: "function",
+    name: "aggregate3",
+    stateMutability: "payable",
+    inputs: [
+      {
+        name: "calls",
+        type: "tuple[]",
+        components: [
+          { name: "target", type: "address" },
+          { name: "allowFailure", type: "bool" },
+          { name: "callData", type: "bytes" },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "returnData",
+        type: "tuple[]",
+        components: [
+          { name: "success", type: "bool" },
+          { name: "returnData", type: "bytes" },
+        ],
+      },
+    ],
+  },
+] as const;
 const pairAbi = [
   {
     type: "function",
@@ -75,16 +117,23 @@ const wbnbAbi = [
 
 /* -------------------- Simple token model -------------------- */
 type TokenInfo = {
-  symbol: "tBNB" | "WBNB" | "ASSET";
+  symbol: string;
+  name: string;
   address: `0x${string}` | null; // null = native (tBNB)
   decimals: number;
   native?: boolean;
 };
 
 const TOKENS: readonly TokenInfo[] = [
-  { symbol: "tBNB", address: null, decimals: 18, native: true },
-  { symbol: "WBNB", address: WBNB, decimals: 18 },
-  { symbol: "ASSET", address: ASSET, decimals: 18 },
+  {
+    symbol: "tBNB",
+    name: "Testnet BNB",
+    address: null,
+    decimals: 18,
+    native: true,
+  },
+  { symbol: "WBNB", name: "Wrapped BNB", address: WBNB, decimals: 18 },
+  { symbol: "RVP", name: "RealVault Protocol", address: ASSET, decimals: 18 },
 ];
 
 /* -------------------- AMM math (direct pair) -------------------- */
@@ -93,7 +142,12 @@ const FEE_NUM = BigInt(9975);
 const FEE_DEN = BigInt(10000);
 
 function getAmountOut(amountIn: bigint, reserveIn: bigint, reserveOut: bigint) {
-  if (amountIn <= BigInt(0) || reserveIn <= BigInt(0) || reserveOut <= BigInt(0)) return BigInt(0);
+  if (
+    amountIn <= BigInt(0) ||
+    reserveIn <= BigInt(0) ||
+    reserveOut <= BigInt(0)
+  )
+    return BigInt(0);
   const amountInWithFee = amountIn * FEE_NUM;
   const numerator = amountInWithFee * reserveOut;
   const denominator = reserveIn * FEE_DEN + amountInWithFee;
@@ -105,6 +159,10 @@ const isWrap = (from: TokenInfo, to: TokenInfo) =>
   from.native && !to.native && getAddress(to.address!) === WBNB;
 const isUnwrap = (from: TokenInfo, to: TokenInfo) =>
   !from.native && getAddress(from.address!) === WBNB && to.native;
+const isFromRvp = (from: TokenInfo) =>
+  !from.native && getAddress(from.address!) === ASSET;
+const isToRvp = (to: TokenInfo) =>
+  !to.native && getAddress(to.address!) === ASSET;
 
 /* -------------------- Page -------------------- */
 export default function SwapPage() {
@@ -113,10 +171,15 @@ export default function SwapPage() {
     useContractWriter();
 
   const [from, setFrom] = useState<TokenInfo>(TOKENS[0]); // tBNB
-  const [to, setTo] = useState<TokenInfo>(TOKENS[2]); // ASSET
+  const [to, setTo] = useState<TokenInfo>(TOKENS[2]); // RVP
   const [amountUi, setAmountUi] = useState("");
   const [slippageBps, setSlippageBps] = useState(50); // 0.5%
   const [uiError, setUiError] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [needsApproval, setNeedsApproval] = useState(false);
+  const [transactionType, setTransactionType] = useState<"approval" | "swap" | null>(null);
+  const toastIdRef = useRef<string | number | null>(null);
 
   const clearError = () => setUiError("");
 
@@ -171,16 +234,141 @@ export default function SwapPage() {
       const token1 = t1 ? getAddress(t1 as string) : null;
       const r0 = reservesRaw ? ((reservesRaw as any)[0] as bigint) : BigInt(0);
       const r1 = reservesRaw ? ((reservesRaw as any)[1] as bigint) : BigInt(0);
-      const isWbnbAsset =
+      const isWbnbRvp =
         token0 &&
         token1 &&
         ((token0 === WBNB && token1 === ASSET) ||
           (token0 === ASSET && token1 === WBNB));
-      return { token0, token1, r0, r1, isWbnbAsset };
+      return { token0, token1, r0, r1, isWbnbRvp };
     } catch {
       return null;
     }
   }, [t0, t1, reservesRaw]);
+
+  /* ---- Check Allowance ---- */
+  const { data: allowanceRaw, refetch: refetchAllowance } = useReadContract({
+    abi: erc20Abi,
+    address: from.address ?? undefined,
+    functionName: "allowance",
+    args:
+      address && from.address
+        ? [address as `0x${string}`, PAIR_ASSET_WBNB]
+        : undefined,
+    query: { enabled: Boolean(address && from.address && !from.native) },
+  });
+
+  useEffect(() => {
+    if (!from.native && amountUi && allowanceRaw !== undefined) {
+      const allowance = allowanceRaw as bigint;
+      const amountInWei = parseUnits(amountUi, from.decimals);
+      setNeedsApproval(allowance < amountInWei);
+    } else {
+      setNeedsApproval(false);
+    }
+  }, [from, amountUi, allowanceRaw]);
+
+  /* ---- Wait for approval confirmation ---- */
+  useEffect(() => {
+    if (isApproved && isConfirmed) {
+      setIsApproved(false);
+    }
+  }, [isConfirmed]);
+
+  /* ---- Toast: Approval Pending ---- */
+  useEffect(() => {
+    if (isApproving) {
+      toastIdRef.current = toast.loading("Approving token...", {
+        description: "Sign the transaction to approve token spending.",
+      });
+    }
+  }, [isApproving]);
+
+  /* ---- Toast: Approval Success ---- */
+  useEffect(() => {
+    if (isApproved && isConfirmed && transactionType === "approval") {
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+      }
+      const truncatedHash = txHash
+        ? `${txHash.slice(0, 8)}...${txHash.slice(-6)}`
+        : "Transaction sent";
+      toast.success("Token approved!", {
+        description: `TxID: ${truncatedHash}`,
+        action: txHash
+          ? {
+              label: "View on BSCScan",
+              onClick: () =>
+                window.open(
+                  `https://testnet.bscscan.com/tx/${txHash}`,
+                  "_blank"
+                ),
+            }
+          : undefined,
+      });
+      setTransactionType(null);
+      // Refetch allowance after approval
+      refetchAllowance();
+    }
+  }, [isApproved, isConfirmed, txHash, transactionType, refetchAllowance]);
+
+  /* ---- Toast: Swap Pending ---- */
+  useEffect(() => {
+    if (isPending && !isApproving) {
+      toastIdRef.current = toast.loading("Processing swap...", {
+        description: "Sign the transaction to complete the swap.",
+      });
+    }
+  }, [isPending, isApproving]);
+
+  /* ---- Toast: Mining/Confirmation ---- */
+  useEffect(() => {
+    if (isMining) {
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+      }
+      const isApprovalMining = transactionType === "approval";
+      const message = isApprovalMining ? "Confirming approval..." : "Swapping...";
+      const description = isApprovalMining
+        ? "Waiting for approval confirmation."
+        : "Waiting for transaction confirmation.";
+
+      toastIdRef.current = toast.loading(message, {
+        description,
+      });
+    }
+  }, [isMining, transactionType]);
+
+  /* ---- Toast: Swap Success ---- */
+  useEffect(() => {
+    if (isConfirmed && isMining === false && txHash && transactionType === "swap") {
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+      }
+      const truncatedHash = `${txHash.slice(0, 8)}...${txHash.slice(-6)}`;
+      toast.success("Swap completed!", {
+        description: `TxID: ${truncatedHash}`,
+        action: {
+          label: "View on BSCScan",
+          onClick: () =>
+            window.open(`https://testnet.bscscan.com/tx/${txHash}`, "_blank"),
+        },
+      });
+      setAmountUi("");
+      setTransactionType(null);
+    }
+  }, [isConfirmed, isMining, txHash, transactionType]);
+
+  /* ---- Toast: Error ---- */
+  useEffect(() => {
+    if (uiError) {
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+      }
+      toast.error("Transaction failed", {
+        description: uiError,
+      });
+    }
+  }, [uiError]);
 
   /* ---- Quote (direct via reserves) ---- */
   const [estOut, setEstOut] = useState<string>("-");
@@ -198,8 +386,8 @@ export default function SwapPage() {
         setRawOut(null);
 
         if (!amountUi || Number(amountUi) <= 0) return;
-        if (!pair || !pair.isWbnbAsset) {
-          setRouteMsg("Pair is not ASSET/WBNB or reserves not loaded.");
+        if (!pair || !pair.isWbnbRvp) {
+          setRouteMsg("Pair is not RVP/WBNB or reserves not loaded.");
           return;
         }
 
@@ -215,23 +403,23 @@ export default function SwapPage() {
           return;
         }
 
-        // Only allow swaps that involve the ASSET/WBNB pair
+        // Only allow swaps that involve the RVP/WBNB pair
         const isFromWbnb = !from.native && getAddress(from.address!) === WBNB;
         const isToWbnb = !to.native && getAddress(to.address!) === WBNB;
-        const isFromAsset = !from.native && getAddress(from.address!) === ASSET;
-        const isToAsset = !to.native && getAddress(to.address!) === ASSET;
+        const isFromRvp = !from.native && getAddress(from.address!) === ASSET;
+        const isToRvp = !to.native && getAddress(to.address!) === ASSET;
 
-        // tBNB<->ASSET go through wrap/unwrap + pair — valid
-        // WBNB<->ASSET go directly — valid
+        // tBNB<->RVP go through wrap/unwrap + pair — valid
+        // WBNB<->RVP go directly — valid
         const valid =
-          (isFromWbnb && isToAsset) ||
-          (isFromAsset && isToWbnb) ||
-          (from.native && isToAsset) ||
-          (isFromAsset && to.native);
+          (isFromWbnb && isToRvp) ||
+          (isFromRvp && isToWbnb) ||
+          (from.native && isToRvp) ||
+          (isFromRvp && to.native);
 
         if (!valid) {
           setRouteMsg(
-            "Unsupported route (this file only handles ASSET/WBNB pair)."
+            "Unsupported route (this file only handles RVP/WBNB pair)."
           );
           return;
         }
@@ -246,15 +434,15 @@ export default function SwapPage() {
         const token1 = pair.token1!;
         const isToken0Wbnb = token0 === WBNB;
 
-        // Case A: WBNB -> ASSET (or tBNB->ASSET after wrapping)
-        if ((isFromWbnb && isToAsset) || (from.native && isToAsset)) {
-          // input = WBNB; output = ASSET
+        // Case A: WBNB -> RVP (or tBNB->RVP after wrapping)
+        if ((isFromWbnb && isToRvp) || (from.native && isToRvp)) {
+          // input = WBNB; output = RVP
           reserveIn = isToken0Wbnb ? pair.r0 : pair.r1;
           reserveOut = isToken0Wbnb ? pair.r1 : pair.r0;
         }
-        // Case B: ASSET -> WBNB (or ASSET->tBNB then unwrap)
+        // Case B: RVP -> WBNB (or RVP->tBNB then unwrap)
         else {
-          // input = ASSET; output = WBNB
+          // input = RVP; output = WBNB
           reserveIn = isToken0Wbnb ? pair.r1 : pair.r0;
           reserveOut = isToken0Wbnb ? pair.r0 : pair.r1;
         }
@@ -280,15 +468,45 @@ export default function SwapPage() {
     };
   }, [amountUi, from, to, slippageBps, pair]);
 
+  /* ---- Approve Token ---- */
+  const approve = async () => {
+    try {
+      setUiError("");
+      if (!address) throw new Error("Connect your wallet first.");
+      if (!from.address) throw new Error("Cannot approve native token.");
+
+      const amountIn = parseUnits(amountUi, from.decimals);
+      setIsApproving(true);
+      setTransactionType("approval");
+
+      await call({
+        abi: erc20Abi,
+        address: from.address,
+        functionName: "approve",
+        args: [PAIR_ASSET_WBNB, amountIn],
+      });
+
+      setIsApproved(true);
+    } catch (err: any) {
+      const msg = err?.shortMessage || err?.message || "Approval failed.";
+      setUiError(
+        msg.replace(/0x[a-fA-F0-9]{20,}/g, (m: string) => m.slice(0, 10) + "…")
+      );
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   /* ---- Direct swap on pair ---- */
   const swap = async () => {
     try {
       setUiError("");
+      setTransactionType("swap");
       if (!address) throw new Error("Connect your wallet first.");
       if (!amountUi || Number(amountUi) <= 0)
         throw new Error("Enter a valid amount.");
-      if (!pair || !pair.isWbnbAsset)
-        throw new Error("Pair not ready (ASSET/WBNB).");
+      if (!pair || !pair.isWbnbRvp)
+        throw new Error("Pair not ready (RVP/WBNB).");
 
       if (Number(amountUi) > fromBalance)
         throw new Error("Amount exceeds your balance.");
@@ -320,61 +538,71 @@ export default function SwapPage() {
       }
 
       // C) REAL SWAP VIA PAIR (UniswapV2 pattern)
-      // We only support the single ASSET/WBNB pair.
+      // We only support the single RVP/WBNB pair.
       const token0 = pair.token0!;
       const isToken0Wbnb = token0 === WBNB;
 
-      // Determine if we're swapping *into* WBNB or ASSET
+      // Determine if we're swapping *into* WBNB or RVP
       const fromIsWbnb = !from.native && getAddress(from.address!) === WBNB;
-      const fromIsAsset = !from.native && getAddress(from.address!) === ASSET;
+      const fromIsRvp = !from.native && getAddress(from.address!) === ASSET;
       const toIsWbnb = !to.native && getAddress(to.address!) === WBNB;
-      const toIsAsset = !to.native && getAddress(to.address!) === ASSET;
+      const toIsRvp = !to.native && getAddress(to.address!) === ASSET;
 
-      // tBNB -> ASSET: wrap then swap
-      if (from.native && toIsAsset) {
-        // wrap
-        await call({
-          abi: wbnbAbi,
-          address: WBNB,
-          functionName: "deposit",
-          args: [],
-          value: amountIn,
-        } as any);
-        // then treat as WBNB -> ASSET below
-        // update local state to avoid confusion
-      }
-
-      // ASSET -> tBNB: swap to WBNB then unwrap after swap
-      const willUnwrapAfter = fromIsAsset && to.native ? true : false;
+      // RVP -> tBNB: swap to WBNB then unwrap after swap
+      const willUnwrapAfter = fromIsRvp && to.native ? true : false;
 
       // Define tokenIn for the transfer step
       const effectiveFrom = from.native ? { ...TOKENS[1] } : from; // if tBNB, we just wrapped to WBNB
 
+      // Prepare multicall array
+      const calls: Array<{
+        target: `0x${string}`;
+        allowFailure: boolean;
+        callData: `0x${string}`;
+      }> = [];
+
+      // 0) Add wrap call if tBNB -> RVP (multicall will send value)
+      if (from.native && toIsRvp) {
+        const wrapCallData = encodeFunctionData({
+          abi: wbnbAbi,
+          functionName: "deposit",
+          args: [],
+        });
+        calls.push({
+          target: WBNB,
+          allowFailure: false,
+          callData: wrapCallData,
+        });
+      }
+
       // 1) Transfer tokenIn directly to pair (ERC-20 transfer from user)
-      await call({
+      const transferCallData = encodeFunctionData({
         abi: erc20Abi,
-        address: effectiveFrom.address as `0x${string}`,
         functionName: "transfer",
         args: [PAIR_ASSET_WBNB, amountIn],
       });
+      calls.push({
+        target: effectiveFrom.address as `0x${string}`,
+        allowFailure: false,
+        callData: transferCallData,
+      });
 
-      // 2) Call pair.swap with correct side
-      //    amount0Out/amount1Out depends on which side is output relative to token0/token1
+      // 2) Calculate output amounts
       let amount0Out = BigInt(0),
         amount1Out = BigInt(0);
 
-      // Case: WBNB -> ASSET (or tBNB->WBNB->ASSET)
+      // Case: WBNB -> RVP (or tBNB->WBNB->RVP)
       if (
         effectiveFrom.address &&
         getAddress(effectiveFrom.address) === WBNB &&
-        (toIsAsset || willUnwrapAfter === false)
+        (toIsRvp || willUnwrapAfter === false)
       ) {
         const reserveIn = isToken0Wbnb ? pair.r0 : pair.r1;
         const reserveOut = isToken0Wbnb ? pair.r1 : pair.r0;
         const out = getAmountOut(amountIn, reserveIn, reserveOut);
         const min = (out * BigInt(10_000 - slippageBps)) / BigInt(10_000);
         if (out < min) throw new Error("Slippage too high.");
-        // output = ASSET
+        // output = RVP
         if (isToken0Wbnb) {
           amount0Out = BigInt(0);
           amount1Out = out;
@@ -383,7 +611,7 @@ export default function SwapPage() {
           amount1Out = BigInt(0);
         }
       }
-      // Case: ASSET -> WBNB
+      // Case: RVP -> WBNB
       else {
         const reserveIn = isToken0Wbnb ? pair.r1 : pair.r0;
         const reserveOut = isToken0Wbnb ? pair.r0 : pair.r1;
@@ -400,24 +628,46 @@ export default function SwapPage() {
         }
       }
 
-      // 3) swap to user (or to this EOA then unwrap)
-      await call({
+      // 3) Add swap call
+      const swapCallData = encodeFunctionData({
         abi: pairAbi,
-        address: PAIR_ASSET_WBNB,
         functionName: "swap",
         args: [amount0Out, amount1Out, user, "0x"],
       });
+      calls.push({
+        target: PAIR_ASSET_WBNB,
+        allowFailure: false,
+        callData: swapCallData,
+      });
 
-      // 4) If we wanted tBNB, unwrap received WBNB
+      // 4) Add unwrap call if needed
       if (willUnwrapAfter) {
-        const out = rawOut ?? BigInt(0); // best-effort
-        await call({
+        const out = rawOut ?? BigInt(0);
+        const unwrapCallData = encodeFunctionData({
           abi: wbnbAbi,
-          address: WBNB,
           functionName: "withdraw",
-          args: [out > BigInt(0) ? out : BigInt(0)], // if we don't know exact, you can put amount1Out/amount0Out accordingly
+          args: [out > BigInt(0) ? out : BigInt(0)],
+        });
+        calls.push({
+          target: WBNB,
+          allowFailure: false,
+          callData: unwrapCallData,
         });
       }
+
+      // Execute multicall (with value if wrapping tBNB)
+      const callConfig = {
+        abi: multicallAbi,
+        address: MULTICALL_ADDRESS,
+        functionName: "aggregate3",
+        args: [calls],
+      } as any;
+
+      if (from.native && toIsRvp) {
+        callConfig.value = amountIn;
+      }
+
+      await call(callConfig);
     } catch (err: any) {
       if (err?.userRejected || err?.code === 4001) {
         setUiError("Transaction cancelled.");
@@ -430,43 +680,50 @@ export default function SwapPage() {
     }
   };
 
-  /* -------------------- UI (keeps your DA/classes) -------------------- */
+  /* -------------------- UI (Tailwind CSS) -------------------- */
   return (
-    <section className="section">
-      <div className="swap-container">
-        <div className="card glass shadow">
-          <div className="cardHeader">
-            <h2 className="cardTitle">Swap (direct pair)</h2>
+    <section className="pt-24 h-screen pb-24">
+      <div className="max-w-xl mx-auto">
+        <div className="border border-slate-700/60 rounded-xl bg-gradient-to-r from-slate-950/85 to-slate-900/85 overflow-hidden backdrop-blur-lg shadow-2xl">
+          <div className="px-5 pt-5 pb-3">
+            <h2 className="text-center text-2xl font-black bg-gradient-to-r from-purple-600 to-cyan-400 bg-clip-text text-transparent">
+              Swap RVP
+            </h2>
           </div>
 
-          <div className="cardContent">
+          <div className="px-5 pb-5 pt-4 grid gap-4">
             {/* FROM */}
-            <div className="fieldGroup">
-              <div className="labelRow">
+            <div className="grid gap-3">
+              <div className="flex justify-between text-sm text-gray-500">
                 <span>From</span>
-                <span>
+                <span
+                  onClick={() => setAmountUi(fromBalance.toFixed(6))}
+                  className="cursor-pointer hover:text-primary transition-colors"
+                >
                   Balance: {fromBalance.toFixed(6)} {from.symbol}
                 </span>
               </div>
-              <div className="inputWrap">
-                <select
-                  className="tokenSelect"
+              <div className="grid gap-2">
+                <Select
                   value={from.symbol}
-                  onChange={(e) => {
-                    const t = TOKENS.find(
-                      (x) => x.symbol === (e.target.value as any)
-                    )!;
+                  onValueChange={(value) => {
+                    const t = TOKENS.find((x) => x.symbol === value)!;
                     setFrom(t);
                     clearError();
                   }}
                 >
-                  {TOKENS.map((t) => (
-                    <option key={t.symbol} value={t.symbol}>
-                      {t.symbol}
-                    </option>
-                  ))}
-                </select>
-                <input
+                  <SelectTrigger className="h-14 text-lg w-full border-2 border-primary/60 hover:border-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOKENS.map((t) => (
+                      <SelectItem key={t.symbol} value={t.symbol}>
+                        {t.symbol}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
                   type="number"
                   min="0"
                   step="any"
@@ -476,77 +733,72 @@ export default function SwapPage() {
                     setAmountUi(e.target.value);
                     clearError();
                   }}
-                  className="input"
+                  className="w-full h-14 text-lg px-4 py-2 border-2 border-primary/60 hover:border-primary"
                 />
               </div>
             </div>
 
             {/* SWITCH */}
-            <div className="switchRow">
-              <button
+            <div className="flex justify-center py-2">
+              <Button
                 onClick={() => {
                   const tmp = from;
                   setFrom(to);
                   setTo(tmp);
                   clearError();
                 }}
-                className="switchBtn"
+                className="w-10 h-10 rounded-full cursor-pointer transition-all duration-250 hover:border-violet-500 hover:shadow-[0_0_18px_rgba(139,92,246,0.35)]"
                 title="Switch tokens"
-              />
+              >
+                <ArrowUpDown className="w-5 h-5" />
+              </Button>
             </div>
 
             {/* TO */}
-            <div className="fieldGroup">
-              <div className="labelRow">
+            <div className="grid gap-3">
+              <div className="flex justify-between text-sm text-gray-500">
                 <span>To</span>
               </div>
-              <div className="inputWrap">
-                <select
-                  className="tokenSelect"
+              <div className="grid gap-2">
+                <Select
                   value={to.symbol}
-                  onChange={(e) => {
-                    const t = TOKENS.find(
-                      (x) => x.symbol === (e.target.value as any)
-                    )!;
+                  onValueChange={(value) => {
+                    const t = TOKENS.find((x) => x.symbol === value)!;
                     setTo(t);
                     clearError();
                   }}
                 >
-                  {TOKENS.map((t) => (
-                    <option key={t.symbol} value={t.symbol}>
-                      {t.symbol}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-14 text-lg w-full border-2 border-primary/60 hover:border-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOKENS.map((t) => (
+                      <SelectItem key={t.symbol} value={t.symbol}>
+                        {t.symbol}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  placeholder="0.0"
+                  value={estOut}
+                  disabled
+                  className="w-full h-14 text-lg px-4 py-2 border-2 border-primary/60"
+                />
               </div>
 
               {/* Amount preview */}
               {routeMsg && (
-                <small
-                  style={{ display: "block", marginTop: 6, color: "tomato" }}
-                >
-                  {routeMsg}
-                </small>
-              )}
-              {!routeMsg && rawOut !== null && (
-                <small style={{ display: "block", marginTop: 6, opacity: 0.8 }}>
-                  You would get:{" "}
-                  <b>
-                    {estOut} {to.symbol}
-                  </b>{" "}
-                  · Min received (slippage {slippageBps / 100}%):{" "}
-                  <b>
-                    {minOut} {to.symbol}
-                  </b>
-                </small>
+                <small className="block mt-1.5 text-red-500">{routeMsg}</small>
               )}
             </div>
 
             {/* Slippage */}
-            <div style={{ marginTop: 6 }}>
-              <small style={{ opacity: 0.8 }}>
+            <div className="mt-1.5">
+              <small className="opacity-80">
                 Slippage:
-                <input
+                <Input
                   type="number"
                   min={0}
                   step={1}
@@ -554,43 +806,53 @@ export default function SwapPage() {
                   onChange={(e) =>
                     setSlippageBps(Math.max(0, Number(e.target.value || 0)))
                   }
-                  style={{ width: 70, marginLeft: 8 }}
+                  className="w-16 ml-2 h-8 text-sm border-2 border-primary/60 hover:border-primary"
                 />{" "}
                 bps
               </small>
             </div>
 
             {/* ACTION */}
-            <button
-              type="button"
-              onClick={swap}
-              className="primaryBtn"
-              disabled={!amountUi || isPending || isMining}
-            >
-              {isPending ? "Sign…" : isMining ? "Swapping…" : "Swap"}
-            </button>
+            {needsApproval && !isApproved ? (
+              <Button
+                type="button"
+                onClick={approve}
+                className="w-full h-12 border-0 rounded-xl cursor-pointer font-bold tracking-wide  transition-all duration-250 hover:shadow-[0_0_22px_rgba(34,211,238,0.35),0_0_22px_rgba(124,58,237,0.35)_inset] active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!amountUi || isApproving || isPending || (isMining && transactionType === "approval")}
+              >
+                {isApproving ? "Approving…" : isPending ? "Sign…" : isMining && transactionType === "approval" ? "Approving…" : "Approve"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={swap}
+                className="w-full h-12 border-0 rounded-xl cursor-pointer font-bold tracking-wide  transition-all duration-250 hover:shadow-[0_0_22px_rgba(34,211,238,0.35),0_0_22px_rgba(124,58,237,0.35)_inset] active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!amountUi || isPending || isMining}
+              >
+                {isPending ? "Sign…" : isMining ? "Swapping…" : "Swap"}
+              </Button>
+            )}
 
             {/* FEEDBACK */}
-            <div style={{ marginTop: 10 }}>
+            <div className="mt-2.5">
               {txHash && (
-                <small>
+                <small className="text-slate-300">
                   tx:{" "}
                   <a
                     href={`https://testnet.bscscan.com/tx/${txHash}`}
                     target="_blank"
                     rel="noreferrer"
+                    className="text-cyan-400 hover:underline"
                   >
                     {txHash.slice(0, 10)}…
                   </a>
                 </small>
               )}
-              {isConfirmed && <small> ✅ Confirmed</small>}
+              {isConfirmed && (
+                <small className="text-green-400"> ✅ Confirmed</small>
+              )}
               {uiError && (
-                <small
-                  style={{ color: "tomato", display: "block", marginTop: 8 }}
-                >
-                  {uiError}
-                </small>
+                <small className="block mt-2 text-red-500">{uiError}</small>
               )}
             </div>
           </div>

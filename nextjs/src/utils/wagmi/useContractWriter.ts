@@ -18,7 +18,7 @@ export function useContractWriter() {
   const call = async (opts: WriteOpts) => {
     try {
       // Default gas limit for manual contracts like pair.swap()
-      const gasLimit = opts.gas ?? 300000n; // around 0.0003 BNB max
+      const gasLimit = opts.gas ?? BigInt(300000); // around 0.0003 BNB max
 
       const hash = await writeContractAsync({
         abi: opts.abi,

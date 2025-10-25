@@ -44,11 +44,11 @@ A KYC-enabled asset management platform on BSC Testnet featuring **RealVault Pro
 
 ## Documentation
 
+- **[📜 Scripts Guide](./script/SCRIPTS_README.md)** - Complete guide with all script commands
 - [Wagmi Swap Guide](./WAGMI_SWAP_GUIDE.md) - Frontend integration with wagmi and WalletConnect
 - [Liquidity Pool Guide](./LIQUIDITY_POOL_GUIDE.md) - Complete guide for PancakeSwap V2 integration
 - [Deployment Guide (BSC)](./DEPLOYMENT_BSC.md)
 - [Deployment Guide (General)](./DEPLOYMENT.md)
-- [Scripts Guide](./SCRIPTS_GUIDE.md)
 - [Quick Start](./QUICKSTART.md)
 - [Verification Guide](./VERIFICATION.md)
 

@@ -1,40 +1,30 @@
 import { useKYC } from "@/hooks/use-kyc";
-import { Button } from "./button";
 import { useVerifyKYC } from "@/hooks/use-verify-kyc";
+import { KYCLoading } from "./kyc-loading";
+import { KYCError } from "./kyc-error";
+import { KYCUnavailable } from "./kyc-unavailable";
+import { KYCNotVerified } from "./kyc-not-verified";
+import { KYCVerified } from "./kyc-verified";
 
-export default function KYCComponent({ address }: { address: string }) {
-    const {
-        data: kyc,
-        isLoading,
-        isError,
-        error,
-        refetch,
-      } = useKYC(address);
+export const KYCComponent = ({ address }: { address: string }) => {
+  const { data: kyc, isLoading, isError, error, refetch } = useKYC(address);
+  const { mutate: verifyKYC } = useVerifyKYC();
 
-    const { mutate: verifyKYC } = useVerifyKYC(address);
+  if (isLoading) {
+    return <KYCLoading />;
+  }
 
-    if (isLoading) {
-        return <div>Loading KYC status…</div>;
-    }
-    console.log("KYCComponent render:", { kyc});
-    if (isError) {
-        return <div style={{ color: "tomato" }}>
-            Failed to reach KYC API{(error as any)?.message ? ` — ${(error as any).message}` : ""}.
-        </div>;
-    }
-    if (!kyc || !kyc.success) {
-        return <div style={{ color: "tomato" }}>
-            KYC status unavailable.
-            <button onClick={() => refetch()} style={{ marginLeft: 8, padding: "4px 8px" }}>Retry</button>
-        </div>;
-    }
-    if (kyc.data == false) {
-        return (
-            <div>
-                <span>KYC not verified</span>
-                <Button onClick={() => verifyKYC(address)}>Verify KYC</Button>
-            </div>
-        );
-    }
-    return <div>KYC verified</div>;
-}
+  if (isError) {
+    return <KYCError error={error} />;
+  }
+
+  if (!kyc || !kyc.success) {
+    return <KYCUnavailable onRetry={refetch} />;
+  }
+
+  if (kyc.data === false) {
+    return <KYCNotVerified address={address} onVerify={verifyKYC} />;
+  }
+
+  return <KYCVerified />;
+};
