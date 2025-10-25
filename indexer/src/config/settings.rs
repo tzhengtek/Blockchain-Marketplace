@@ -11,7 +11,6 @@ pub struct Settings {
     pub contract: ContractSettings,
     pub database_url: String,
     pub wallet_private_key: String,
-    pub _port: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,14 +31,17 @@ impl Settings {
     pub fn load() -> Result<Settings, Error> {
         dotenv().ok();
 
-        let config_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let default_file_path = config_dir.join("src/config/default.toml");
+        const DEFAULT_CONFIG: &str = include_str!("default.toml");
 
         let config = Config::builder()
-            .add_source(config::File::from(default_file_path).required(true))
+            .add_source(config::File::from_str(
+                DEFAULT_CONFIG,
+                config::FileFormat::Toml,
+            ))
             .add_source(Environment::default().separator("__"))
-            .add_source(File::with_name("default").required(false))
+            .add_source(File::with_name("/app/config/default").required(false))
             .build()?;
+
         config
             .try_deserialize::<Settings>()
             .map_err(|_| Error::msg("Error while deserializing settings"))

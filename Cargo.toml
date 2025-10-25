@@ -5,7 +5,7 @@ members = [
     "database",
 ]
 
-resolver = "3"
+resolver = "2"
 
 [workspace.dependencies]
 indexer = { path = "indexer" }

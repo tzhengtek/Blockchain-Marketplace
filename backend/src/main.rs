@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::Arc;
 
 use axum::Json;
@@ -41,6 +42,11 @@ async fn main() -> Result<()> {
 
     let settings = Settings::load().map_err(Error::msg)?;
 
+    let port = env::var("PORT")
+        .ok()
+        .or_else(|| env::var("LOCAL_PORT").ok())
+        .unwrap_or_else(|| "3000".to_string());
+
     tracing::debug!("{:?}", settings);
 
     let indexer = BlockchainIndexer::new(&settings).await?;
@@ -55,9 +61,9 @@ async fn main() -> Result<()> {
         .nest("/api", app_routes);
     tracing::info!("Routes Initialized !");
 
-    let server_host = format!("Server listening on http://localhost:{}", settings._port);
+    let server_host = format!("Server listening on http://localhost:{}", port);
     tracing::info!(server_host);
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings._port)).await?;
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
